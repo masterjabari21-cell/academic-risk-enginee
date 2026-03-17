@@ -58,10 +58,10 @@ export default function UploadPage() {
     <div className="min-h-screen bg-[#fdf4e7] text-red-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-2xl px-4 py-10 pb-20 sm:px-6 lg:px-8">
 
         {/* Page heading */}
-        <div className="mb-10 text-center">
+        <div className="mb-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-indigo-400">
             Step 1 of 2
           </p>
@@ -80,7 +80,7 @@ export default function UploadPage() {
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
           className={`
-            relative cursor-pointer rounded-3xl border-2 border-dashed px-8 py-16 text-center
+            relative cursor-pointer rounded-2xl border-2 border-dashed px-8 py-12 text-center
             transition-all duration-200 select-none
             ${dragging
               ? "border-red-500 bg-red-100/60 dark:border-indigo-400 dark:bg-indigo-900/20 scale-[1.01]"
