@@ -26,6 +26,18 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Prevent light flash during page transitions in dark mode */
+html.dark,
+html.dark body {
+  background: #020617; /* slate-950 */
+}
+
+/* Prevent cream flash during page transitions in light mode */
+html:not(.dark),
+html:not(.dark) body {
+  background: #fdf4e7;
+}
+
 /* ── Page transition ── */
 
 @keyframes page-enter {
