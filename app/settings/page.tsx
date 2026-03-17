@@ -99,43 +99,78 @@ function Select({ value, onChange, options }: {
   );
 }
 
+// ── Persistence helpers ────────────────────────────────────────────────────
+
+function load<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function save<T>(key: string, value: T) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("theme") === "dark") return "dark";
-    return "light";
-  });
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    load<string>("theme", "light") === "dark" ? "dark" : "light"
+  );
 
-  const [notifications, setNotifications] = useState<NotificationSettings>({
-    deadlineReminders: true,
-    weeklyRiskSummary: true,
-    highRiskAlerts: true,
-    examCountdowns: false,
-  });
+  const [notifications, setNotifications] = useState<NotificationSettings>(() =>
+    load("gr:notifications", {
+      deadlineReminders: true,
+      weeklyRiskSummary: true,
+      highRiskAlerts: true,
+      examCountdowns: false,
+    })
+  );
 
-  const [profile, setProfile] = useState<Profile>({
-    semester: "spring-2025",
-    standing: "junior",
-    gpaGoal: "3.50",
-    major: "Computer Science",
-  });
+  const [profile, setProfile] = useState<Profile>(() =>
+    load("gr:profile", {
+      semester: "spring-2025",
+      standing: "junior",
+      gpaGoal: "3.50",
+      major: "Computer Science",
+    })
+  );
 
-  const [riskSensitivity, setRiskSensitivity] = useState("balanced");
+  const [riskSensitivity, setRiskSensitivity] = useState<string>(() =>
+    load("gr:riskSensitivity", "balanced")
+  );
+
   const [cleared, setCleared] = useState(false);
 
   function applyTheme(next: "light" | "dark") {
     setTheme(next);
-    localStorage.setItem("theme", next);
+    save("theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
   }
 
   function toggleNotification(key: keyof NotificationSettings) {
-    setNotifications((prev: NotificationSettings) => ({ ...prev, [key]: !prev[key] }));
+    setNotifications((prev: NotificationSettings) => {
+      const next = { ...prev, [key]: !prev[key] };
+      save("gr:notifications", next);
+      return next;
+    });
   }
 
   function updateProfile(key: keyof Profile, value: string) {
-    setProfile((prev) => ({ ...prev, [key]: value }));
+    setProfile((prev) => {
+      const next = { ...prev, [key]: value };
+      save("gr:profile", next);
+      return next;
+    });
+  }
+
+  function updateRiskSensitivity(value: string) {
+    setRiskSensitivity(value);
+    save("gr:riskSensitivity", value);
   }
 
   function handleClearData() {
@@ -265,7 +300,7 @@ export default function SettingsPage() {
               <SettingRow label="Sensitivity" description="How easily your score reaches 'High' risk.">
                 <Select
                   value={riskSensitivity}
-                  onChange={setRiskSensitivity}
+                  onChange={updateRiskSensitivity}
                   options={[
                     { value: "conservative", label: "Conservative" },
                     { value: "balanced",     label: "Balanced"     },
