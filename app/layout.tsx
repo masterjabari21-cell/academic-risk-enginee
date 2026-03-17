@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Academic Risk Engine",
-  description: "A lightweight student risk analysis dashboard",
+  title: "GradeRadar",
+  description: "GradeRadar — predict academic risk before it becomes a crisis.",
 };
 
 export default function RootLayout({

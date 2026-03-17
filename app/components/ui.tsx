@@ -60,7 +60,7 @@ export function SiteHeader() {
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <div>
           <Link href="/" className="text-xl font-bold text-red-900 dark:text-white">
-            Academic Risk Engine
+            GradeRadar
           </Link>
         </div>
         <nav className="flex items-center gap-2 text-sm text-red-800 dark:text-slate-200">

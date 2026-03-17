@@ -22,7 +22,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-red-400 animate-glow-pulse" />
           <span className="text-sm font-semibold tracking-widest text-red-300 uppercase">
-            Academic Risk Engine
+            GradeRadar
           </span>
         </div>
         <div className="hidden items-center gap-1 text-sm text-[#e8d5b7] sm:flex">
@@ -58,7 +58,7 @@ export default function Home() {
 
         {/* Subheadline */}
         <p className="animate-fade-up-delay-2 mx-auto mt-6 max-w-2xl text-center text-lg leading-relaxed text-[#c9a882]">
-          Academic Risk Engine transforms your course data into predictive signals — surfacing overload weeks, slipping grades, and burnout patterns before they become crises.
+          GradeRadar transforms your course data into predictive signals — surfacing overload weeks, slipping grades, and burnout patterns before they become crises.
         </p>
 
         {/* CTAs */}
