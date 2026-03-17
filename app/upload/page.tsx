@@ -1,45 +1,233 @@
+"use client";
+
 import Link from "next/link";
-import { Button, Card, PageShell, SiteHeader } from "../components/ui";
+import { useRef, useState } from "react";
+import { SiteHeader } from "../components/ui";
+
+interface UploadedFile {
+  name: string;
+  size: number;
+  type: string;
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function UploadPage() {
+  const [dragging, setDragging] = useState(false);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function addFiles(incoming: FileList | null) {
+    if (!incoming) return;
+    const accepted = Array.from(incoming).filter(
+      (f) => f.type === "application/pdf" || f.name.endsWith(".pdf")
+    );
+    setFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name));
+      const fresh = accepted
+        .filter((f) => !existing.has(f.name))
+        .map((f) => ({ name: f.name, size: f.size, type: f.type }));
+      return [...prev, ...fresh];
+    });
+    setAnalyzed(false);
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+    setAnalyzed(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    addFiles(e.dataTransfer.files);
+  }
+
+  function handleAnalyze() {
+    if (!files.length || analyzing) return;
+    setAnalyzing(true);
+    setTimeout(() => {
+      setAnalyzing(false);
+      setAnalyzed(true);
+    }, 2200);
+  }
+
   return (
     <div className="min-h-screen bg-[#fdf4e7] text-red-900 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
       <SiteHeader />
-      <PageShell title="Upload student data">
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <Card
-            title="Import CSV"
-            footer={<Button type="button">Choose file</Button>}
-          >
-            Upload your student performance dataset in CSV format.
-            <div className="mt-2 text-xs text-red-400 dark:text-slate-400">
-              We recommend columns like student_id, course, attendance_pct, grades, and risk_factors.
-            </div>
-          </Card>
 
-          <Card title="Quick guide">
-            <ul className="list-disc pl-4 text-red-800/80 dark:text-slate-300">
-              <li>Step 1: Download template</li>
-              <li>Step 2: Map columns</li>
-              <li>Step 3: Run risk analysis</li>
-            </ul>
-            <div className="mt-3 flex gap-2">
-              <Button variant="ghost" type="button">
-                Download template
-              </Button>
-              <Button type="button">Start analysis</Button>
+      <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+
+        {/* Page heading */}
+        <div className="mb-10 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-indigo-400">
+            Step 1 of 2
+          </p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-red-900 dark:text-white sm:text-4xl">
+            Upload your syllabus
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-red-700/60 dark:text-slate-400">
+            Drop in your course syllabus PDFs and GradeRadar will map out your semester — deadlines, workload peaks, and risk windows — automatically.
+          </p>
+        </div>
+
+        {/* Drop zone */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`
+            relative cursor-pointer rounded-3xl border-2 border-dashed px-8 py-16 text-center
+            transition-all duration-200 select-none
+            ${dragging
+              ? "border-red-500 bg-red-100/60 dark:border-indigo-400 dark:bg-indigo-900/20 scale-[1.01]"
+              : "border-red-200 bg-white hover:border-red-400 hover:bg-red-50/50 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/10"
+            }
+          `}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => addFiles(e.target.files)}
+          />
+
+          {/* Icon */}
+          <div className={`
+            mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-3xl
+            transition-colors duration-200
+            ${dragging
+              ? "bg-red-200 dark:bg-indigo-800/60"
+              : "bg-red-100 dark:bg-slate-800"
+            }
+          `}>
+            📄
+          </div>
+
+          <p className="text-base font-semibold text-red-900 dark:text-slate-100">
+            {dragging ? "Drop your PDFs here" : "Drag & drop your syllabus PDFs"}
+          </p>
+          <p className="mt-1 text-sm text-red-500 dark:text-slate-500">
+            or <span className="font-medium text-red-600 underline underline-offset-2 dark:text-indigo-400">browse files</span> from your device
+          </p>
+          <p className="mt-4 text-xs text-red-400/70 dark:text-slate-600">
+            Supports PDF &nbsp;·&nbsp; Up to 20 MB per file &nbsp;·&nbsp; Multiple syllabuses welcome
+          </p>
+        </div>
+
+        {/* File list */}
+        {files.length > 0 && (
+          <ul className="mt-4 space-y-2">
+            {files.map((file) => (
+              <li
+                key={file.name}
+                className="flex items-center justify-between rounded-2xl border border-red-100 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/70"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xl">📑</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-red-400 dark:text-slate-500">
+                      {formatBytes(file.size)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeFile(file.name); }}
+                  className="ml-4 flex-shrink-0 rounded-full p-1.5 text-red-300 transition hover:bg-red-100 hover:text-red-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                  aria-label="Remove file"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* What we extract */}
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          {[
+            { icon: "📅", label: "Deadline mapping", desc: "Every due date pulled from your syllabuses" },
+            { icon: "⚡", label: "Workload peaks", desc: "Weeks where assignments collide get flagged" },
+            { icon: "🎯", label: "Risk windows", desc: "High-risk periods surfaced before they hit" },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border border-red-100 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/50"
+            >
+              <span className="text-2xl">{item.icon}</span>
+              <p className="mt-2 text-sm font-semibold text-red-900 dark:text-slate-100">{item.label}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-red-500/80 dark:text-slate-400">{item.desc}</p>
             </div>
-          </Card>
+          ))}
         </div>
-        <div className="mt-6 rounded-xl border border-dashed border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
-          Tip: Keep your uploaded files under 20MB for fastest previews.
+
+        {/* Analyze button */}
+        <div className="mt-8">
+          {analyzed ? (
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-6 py-5 text-center dark:border-green-800 dark:bg-green-950/30">
+              <p className="text-base font-semibold text-green-700 dark:text-green-400">
+                ✓ Analysis complete
+              </p>
+              <p className="mt-1 text-sm text-green-600/80 dark:text-green-500/80">
+                Your semester has been mapped. Head to the dashboard to see your risk report.
+              </p>
+              <Link
+                href="/dashboard"
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-green-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-green-500 dark:bg-green-700 dark:hover:bg-green-600"
+              >
+                View risk dashboard →
+              </Link>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={files.length === 0 || analyzing}
+              className={`
+                w-full rounded-2xl px-8 py-5 text-base font-bold tracking-wide transition-all duration-200
+                ${files.length === 0
+                  ? "cursor-not-allowed bg-red-100 text-red-300 dark:bg-slate-800 dark:text-slate-600"
+                  : analyzing
+                  ? "cursor-wait bg-red-600 text-white opacity-80 dark:bg-indigo-600"
+                  : "bg-red-600 text-white shadow-lg shadow-red-200 hover:bg-red-700 hover:shadow-red-300 active:scale-[0.98] dark:bg-indigo-600 dark:shadow-indigo-900 dark:hover:bg-indigo-500"
+                }
+              `}
+            >
+              {analyzing ? (
+                <span className="flex items-center justify-center gap-3">
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Analyzing your semester…
+                </span>
+              ) : (
+                "Analyze Semester →"
+              )}
+            </button>
+          )}
+
+          {files.length === 0 && !analyzed && (
+            <p className="mt-3 text-center text-xs text-red-400/60 dark:text-slate-600">
+              Upload at least one syllabus PDF to continue
+            </p>
+          )}
         </div>
-        <div className="mt-6">
-          <Link href="/dashboard" className="font-medium text-red-600 hover:text-red-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-            Go to dashboard
-          </Link>
-        </div>
-      </PageShell>
+
+      </main>
     </div>
   );
 }
