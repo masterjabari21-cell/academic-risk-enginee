@@ -137,12 +137,30 @@ body {
   animation: shimmer 4s linear infinite;
 }
 
+.dark .shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #a5b4fc 0%,
+    #ffffff 40%,
+    #c4b5fd 60%,
+    #a5b4fc 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .scan-line {
   position: absolute;
   left: 0;
   width: 100%;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(220,38,38,0.4), transparent);
+}
+
+.dark .scan-line {
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent);
   animation: scan-line 8s linear infinite;
   pointer-events: none;
 }
@@ -180,4 +198,16 @@ body {
 .dot-grid {
   background-image: radial-gradient(circle, rgba(220,38,38,0.12) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+.dark .dot-grid {
+  background-image: radial-gradient(circle, rgba(165,180,252,0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.dark .text-gradient {
+  background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 50%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
