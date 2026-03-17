@@ -62,6 +62,7 @@ const NAV_LINKS = [
   { href: "/",          label: "Home"      },
   { href: "/upload",    label: "Upload"    },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/simulate",  label: "GPA Sim"   },
   { href: "/settings",  label: "Settings"  },
 ];
 
