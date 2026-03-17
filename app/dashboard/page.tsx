@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeader } from "../components/ui";
 
 // ── Mock data ──────────────────────────────────────────────────────────────
@@ -105,9 +106,17 @@ export default function DashboardPage() {
       <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
 
         {/* ── Top label ── */}
-        <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-indigo-400">
-          Spring 2025 &nbsp;·&nbsp; Risk Dashboard
-        </p>
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-indigo-400">
+            Spring 2025 &nbsp;·&nbsp; Risk Dashboard
+          </p>
+          <Link
+            href="/upload"
+            className="text-xs text-red-400 underline underline-offset-2 hover:text-red-600 dark:text-slate-500 dark:hover:text-indigo-400"
+          >
+            ← Run new analysis
+          </Link>
+        </div>
 
         {/* ── Hero risk card + course list ── */}
         <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr]">

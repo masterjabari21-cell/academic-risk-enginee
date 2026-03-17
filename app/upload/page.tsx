@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { SiteHeader } from "../components/ui";
 
@@ -17,10 +18,10 @@ function formatBytes(bytes: number) {
 }
 
 export default function UploadPage() {
+  const router = useRouter();
   const [dragging, setDragging] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
-  const [analyzed, setAnalyzed] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function addFiles(incoming: FileList | null) {
@@ -35,12 +36,10 @@ export default function UploadPage() {
         .map((f) => ({ name: f.name, size: f.size, type: f.type }));
       return [...prev, ...fresh];
     });
-    setAnalyzed(false);
   }
 
   function removeFile(name: string) {
     setFiles((prev) => prev.filter((f) => f.name !== name));
-    setAnalyzed(false);
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -52,10 +51,7 @@ export default function UploadPage() {
   function handleAnalyze() {
     if (!files.length || analyzing) return;
     setAnalyzing(true);
-    setTimeout(() => {
-      setAnalyzing(false);
-      setAnalyzed(true);
-    }, 2200);
+    setTimeout(() => router.push("/dashboard"), 2200);
   }
 
   return (
@@ -101,14 +97,10 @@ export default function UploadPage() {
             onChange={(e) => addFiles(e.target.files)}
           />
 
-          {/* Icon */}
           <div className={`
             mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-3xl
             transition-colors duration-200
-            ${dragging
-              ? "bg-red-200 dark:bg-indigo-800/60"
-              : "bg-red-100 dark:bg-slate-800"
-            }
+            ${dragging ? "bg-red-200 dark:bg-indigo-800/60" : "bg-red-100 dark:bg-slate-800"}
           `}>
             📄
           </div>
@@ -135,12 +127,8 @@ export default function UploadPage() {
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-xl">📑</span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-red-400 dark:text-slate-500">
-                      {formatBytes(file.size)}
-                    </p>
+                    <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">{file.name}</p>
+                    <p className="text-xs text-red-400 dark:text-slate-500">{formatBytes(file.size)}</p>
                   </div>
                 </div>
                 <button
@@ -159,9 +147,9 @@ export default function UploadPage() {
         {/* What we extract */}
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
           {[
-            { icon: "📅", label: "Deadline mapping", desc: "Every due date pulled from your syllabuses" },
-            { icon: "⚡", label: "Workload peaks", desc: "Weeks where assignments collide get flagged" },
-            { icon: "🎯", label: "Risk windows", desc: "High-risk periods surfaced before they hit" },
+            { icon: "📅", label: "Deadline mapping",  desc: "Every due date pulled from your syllabuses" },
+            { icon: "⚡", label: "Workload peaks",    desc: "Weeks where assignments collide get flagged" },
+            { icon: "🎯", label: "Risk windows",      desc: "High-risk periods surfaced before they hit" },
           ].map((item) => (
             <div
               key={item.label}
@@ -176,56 +164,53 @@ export default function UploadPage() {
 
         {/* Analyze button */}
         <div className="mt-8">
-          {analyzed ? (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-6 py-5 text-center dark:border-green-800 dark:bg-green-950/30">
-              <p className="text-base font-semibold text-green-700 dark:text-green-400">
-                ✓ Analysis complete
-              </p>
-              <p className="mt-1 text-sm text-green-600/80 dark:text-green-500/80">
-                Your semester has been mapped. Head to the dashboard to see your risk report.
-              </p>
-              <Link
-                href="/dashboard"
-                className="mt-4 inline-flex items-center gap-2 rounded-full bg-green-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-green-500 dark:bg-green-700 dark:hover:bg-green-600"
-              >
-                View risk dashboard →
-              </Link>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={files.length === 0 || analyzing}
-              className={`
-                w-full rounded-2xl px-8 py-5 text-base font-bold tracking-wide transition-all duration-200
-                ${files.length === 0
-                  ? "cursor-not-allowed bg-red-100 text-red-300 dark:bg-slate-800 dark:text-slate-600"
-                  : analyzing
-                  ? "cursor-wait bg-red-600 text-white opacity-80 dark:bg-indigo-600"
-                  : "bg-red-600 text-white shadow-lg shadow-red-200 hover:bg-red-700 hover:shadow-red-300 active:scale-[0.98] dark:bg-indigo-600 dark:shadow-indigo-900 dark:hover:bg-indigo-500"
-                }
-              `}
-            >
-              {analyzing ? (
-                <span className="flex items-center justify-center gap-3">
-                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Analyzing your semester…
-                </span>
-              ) : (
-                "Analyze Semester →"
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={files.length === 0 || analyzing}
+            className={`
+              w-full rounded-2xl px-8 py-5 text-base font-bold tracking-wide transition-all duration-200
+              ${files.length === 0
+                ? "cursor-not-allowed bg-red-100 text-red-300 dark:bg-slate-800 dark:text-slate-600"
+                : analyzing
+                ? "cursor-wait bg-red-600 text-white opacity-80 dark:bg-indigo-600"
+                : "bg-red-600 text-white shadow-lg shadow-red-200 hover:bg-red-700 hover:shadow-red-300 active:scale-[0.98] dark:bg-indigo-600 dark:shadow-indigo-900 dark:hover:bg-indigo-500"
+              }
+            `}
+          >
+            {analyzing ? (
+              <span className="flex items-center justify-center gap-3">
+                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Analyzing your semester…
+              </span>
+            ) : (
+              "Analyze Semester →"
+            )}
+          </button>
 
-          {files.length === 0 && !analyzed && (
+          {files.length === 0 && (
             <p className="mt-3 text-center text-xs text-red-400/60 dark:text-slate-600">
               Upload at least one syllabus PDF to continue
             </p>
           )}
+
+          {files.length > 0 && !analyzing && (
+            <p className="mt-3 text-center text-xs text-red-400/60 dark:text-slate-500">
+              {files.length} file{files.length > 1 ? "s" : ""} ready &nbsp;·&nbsp; Takes about 2 seconds
+            </p>
+          )}
         </div>
+
+        {/* Skip link */}
+        <p className="mt-8 text-center text-xs text-red-400/50 dark:text-slate-600">
+          Want to see results first?{" "}
+          <Link href="/dashboard" className="underline underline-offset-2 hover:text-red-600 dark:hover:text-indigo-400">
+            View sample dashboard
+          </Link>
+        </p>
 
       </main>
     </div>
