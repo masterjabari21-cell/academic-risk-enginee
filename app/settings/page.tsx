@@ -117,7 +117,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile>({
     semester: "spring-2025",
     standing: "junior",
-    gpaGoal: "3.5",
+    gpaGoal: "3.50",
     major: "Computer Science",
   });
 
@@ -207,17 +207,25 @@ export default function SettingsPage() {
                   ]}
                 />
               </SettingRow>
-              <SettingRow label="GPA Goal">
-                <Select
+              <SettingRow label="GPA Goal" description="Target GPA (0.0 – 4.33)">
+                <input
+                  type="number"
+                  min="0"
+                  max="4.33"
+                  step="0.01"
                   value={profile.gpaGoal}
-                  onChange={(v) => updateProfile("gpaGoal", v)}
-                  options={[
-                    { value: "2.0", label: "2.0+" },
-                    { value: "2.5", label: "2.5+" },
-                    { value: "3.0", label: "3.0+" },
-                    { value: "3.5", label: "3.5+" },
-                    { value: "4.0", label: "4.0"  },
-                  ]}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.33)) {
+                      updateProfile("gpaGoal", v);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const n = parseFloat(e.target.value);
+                    if (isNaN(n)) updateProfile("gpaGoal", "3.50");
+                    else updateProfile("gpaGoal", Math.min(4.33, Math.max(0, n)).toFixed(2));
+                  }}
+                  className="w-24 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:ring-indigo-500"
                 />
               </SettingRow>
               <SettingRow label="Major" description="Used to weight assignment types.">
