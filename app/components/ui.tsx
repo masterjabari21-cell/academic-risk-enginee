@@ -67,6 +67,7 @@ export function SiteHeader() {
           <Link href="/" className="rounded-full px-3 py-1 hover:bg-slate-100">Home</Link>
           <Link href="/upload" className="rounded-full px-3 py-1 hover:bg-slate-100">Upload</Link>
           <Link href="/dashboard" className="rounded-full px-3 py-1 hover:bg-slate-100">Dashboard</Link>
+          <Link href="/settings" className="rounded-full px-3 py-1 hover:bg-slate-100">Settings</Link>
         </nav>
       </div>
     </header>
