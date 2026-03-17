@@ -120,7 +120,8 @@ function save<T>(key: string, value: T) {
 export default function SettingsPage() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+    // Read the raw (non-JSON-encoded) value written by applyTheme
+    return localStorage.getItem("theme") === "dark" ? "dark" : "light";
   });
 
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
@@ -149,7 +150,7 @@ export default function SettingsPage() {
 
   function applyTheme(next: "light" | "dark") {
     setTheme(next);
-    save("theme", next);
+    localStorage.setItem("theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
   }
 
