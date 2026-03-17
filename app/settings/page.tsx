@@ -118,9 +118,10 @@ function save<T>(key: string, value: T) {
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    load<string>("theme", "light") === "dark" ? "dark" : "light"
-  );
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  });
 
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
     load("gr:notifications", {
