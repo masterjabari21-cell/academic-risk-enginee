@@ -1,8 +1,93 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SiteHeader } from "../components/ui";
+
+// ── Transform raw Claude output → Scenario ───────────────────────────────────
+
+type RawAnalysis = {
+  assignments: { name: string; due_date: string | null; points: string | null }[];
+  exams:       { name: string; date: string | null; type: string }[];
+  deadlines:   { name: string; date: string | null }[];
+};
+
+function rawToScenario(data: RawAnalysis): Scenario {
+  const total     = data.assignments.length + data.exams.length * 1.5 + data.deadlines.length * 0.5;
+  const riskScore = Math.min(95, Math.max(5, Math.round(total * 5)));
+  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
+
+  // Group items by date to find the busiest weeks
+  const byDate = new Map<string, string[]>();
+  for (const a of data.assignments) {
+    if (a.due_date) byDate.set(a.due_date, [...(byDate.get(a.due_date) ?? []), a.name]);
+  }
+  for (const e of data.exams) {
+    if (e.date) byDate.set(e.date, [...(byDate.get(e.date) ?? []), `${e.name} (${e.type})`]);
+  }
+  const dangerWeeks = [...byDate.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 3)
+    .map(([week, reasons]) => ({
+      week,
+      load: (reasons.length >= 3 ? "Critical" : reasons.length >= 2 ? "High" : "Medium") as "Critical" | "High" | "Medium",
+      reasons,
+    }));
+
+  const assignments = data.assignments.map((a) => ({
+    course: "Your course",
+    title: a.name,
+    due: a.due_date ?? "TBD",
+    risk: "medium" as RiskLevel,
+    weight: a.points ?? "—",
+  }));
+
+  const exams = data.exams.map((e) => ({
+    course: "Your course",
+    title: e.name,
+    date: e.date ?? "TBD",
+    prep: "See syllabus",
+    risk: (e.type === "Final" ? "high" : "medium") as RiskLevel,
+    topics: e.type,
+  }));
+
+  const actions: Scenario["actions"] = [
+    ...data.exams.slice(0, 2).map((e, i) => ({
+      priority: i + 1,
+      label: `Prepare for ${e.name}${e.date ? ` on ${e.date}` : ""} — start studying early`,
+      tag: e.type === "Final" ? "Final exam" : "Exam",
+    })),
+    ...data.assignments.filter((a) => a.points != null).slice(0, 2).map((a, i) => ({
+      priority: i + 3,
+      label: `${a.name}${a.due_date ? ` — due ${a.due_date}` : ""}${a.points ? ` (${a.points})` : ""}`,
+      tag: "Assignment",
+    })),
+    ...data.deadlines.slice(0, 2).map((d, i) => ({
+      priority: i + 5,
+      label: `Don't miss: ${d.name}${d.date ? ` on ${d.date}` : ""}`,
+      tag: "Deadline",
+    })),
+  ];
+
+  const riskNote =
+    riskLabel === "High"   ? `${data.assignments.length} assignments + ${data.exams.length} exams detected. Plan early.` :
+    riskLabel === "Medium" ? `${data.assignments.length} assignments + ${data.exams.length} exams detected. Stay on schedule.` :
+                             `${data.assignments.length} assignments + ${data.exams.length} exams detected. Light load.`;
+
+  return {
+    id: "your-analysis",
+    label: "Your Analysis",
+    semester: "Your Semester",
+    riskScore,
+    riskLabel,
+    riskNote,
+    courses: [],
+    dangerWeeks,
+    assignments,
+    exams,
+    actions,
+  };
+}
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -250,8 +335,22 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [activeId, setActiveId] = useState("high-risk");
-  const s = SCENARIOS.find((x) => x.id === activeId) ?? SCENARIOS[0];
+  const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
+  const [activeId,  setActiveId]  = useState("high-risk");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("gr:analysis");
+      if (!raw) return;
+      const real = rawToScenario(JSON.parse(raw) as RawAnalysis);
+      setScenarios([real, ...SCENARIOS]);
+      setActiveId("your-analysis");
+    } catch {
+      // corrupt data — fall back to mock scenarios silently
+    }
+  }, []);
+
+  const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
 
   const scoreDash   = 283;
   const scoreOffset = scoreDash - (scoreDash * s.riskScore) / 100;
@@ -280,7 +379,7 @@ export default function DashboardPage() {
           <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
             Test scenario
           </span>
-          {SCENARIOS.map((sc) => (
+          {scenarios.map((sc) => (
             <button
               key={sc.id}
               type="button"
