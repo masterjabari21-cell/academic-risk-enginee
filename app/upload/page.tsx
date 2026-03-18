@@ -96,7 +96,7 @@ export default function UploadPage() {
             or <span className="font-medium text-red-600 underline underline-offset-2 dark:text-indigo-400">browse files</span> from your device
           </p>
           <p className="mt-4 text-xs text-red-400/70 dark:text-slate-600">
-            PDF only &nbsp;·&nbsp; Up to 20 MB per file &nbsp;·&nbsp; Multiple syllabuses welcome
+            PDF only &nbsp;·&nbsp; Up to 20 MB per file &nbsp;·&nbsp; Multiple files supported
           </p>
         </div>
 
