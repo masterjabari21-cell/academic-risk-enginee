@@ -98,6 +98,8 @@ html:not(.dark) body {
   0%   { background-position: 100% center; }
   100% { background-position:   0% center; }
 }
+/* With background-size: 300%, the glide is off-screen at both 0% and 100%
+   so the loop resets invisibly — no jump. */
 
 @keyframes border-spin {
   0%   { transform: rotate(0deg); }
@@ -154,33 +156,33 @@ html:not(.dark) body {
 .shimmer-text {
   background: linear-gradient(
     90deg,
-    #fdf4e7 0%,
-    #fdf4e7 40%,
-    #fffaf7 45%,
-    #ffffff 50%,
-    #fffaf7 55%,
-    #fdf4e7 60%,
-    #fdf4e7 100%
+    #ffffff 0%,
+    #ffffff 40%,
+    #fca5a5 46%,
+    #ff6b6b 50%,
+    #fca5a5 54%,
+    #ffffff 60%,
+    #ffffff 100%
   );
-  background-size: 200% auto;
+  background-size: 300% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 7s linear infinite;
+  animation: shimmer 5s linear infinite;
 }
 
 .dark .shimmer-text {
   background: linear-gradient(
     90deg,
-    #a5b4fc 0%,
-    #a5b4fc 40%,
-    #d4d9ff 45%,
-    #ffffff 50%,
-    #d4d9ff 55%,
-    #a5b4fc 60%,
-    #a5b4fc 100%
+    #ffffff 0%,
+    #ffffff 40%,
+    #c4b5fd 46%,
+    #818cf8 50%,
+    #c4b5fd 54%,
+    #ffffff 60%,
+    #ffffff 100%
   );
-  background-size: 200% auto;
+  background-size: 300% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
