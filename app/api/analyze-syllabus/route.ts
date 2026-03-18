@@ -7,10 +7,6 @@ const pdfParse = require("pdf-parse") as (
   buffer: Buffer
 ) => Promise<{ text: string; numpages: number }>;
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 const SYSTEM_PROMPT = `You are an academic assistant that extracts structured data from college course syllabuses.
 
 Extract every assignment, exam, project, and important deadline mentioned in the syllabus.
@@ -38,6 +34,16 @@ Rules:
 - If a field has no items, return an empty array — never omit a key`;
 
 export async function POST(req: NextRequest) {
+  // 0. Validate API key before anything else
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || apiKey === "your_api_key_here") {
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY is not configured. Add your key to .env.local and restart the server." },
+      { status: 503 }
+    );
+  }
+  const anthropic = new Anthropic({ apiKey });
+
   // 1. Parse multipart form data
   let formData: FormData;
   try {
@@ -98,8 +104,8 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    const textBlock = message.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
+    const textBlock = message.content.find((b): b is Anthropic.TextBlock => b.type === "text");
+    if (!textBlock) {
       throw new Error("No text in Claude response");
     }
     rawJson = textBlock.text.trim();
