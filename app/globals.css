@@ -154,9 +154,9 @@ html:not(.dark) body {
 .shimmer-text {
   background: linear-gradient(
     90deg,
-    #fdf4e7 0%,
-    #ffffff 40%,
-    #fca5a5 60%,
+    #ef4444 0%,
+    #fca5a5 30%,
+    #ffffff 60%,
     #fdf4e7 100%
   );
   background-size: 200% auto;
