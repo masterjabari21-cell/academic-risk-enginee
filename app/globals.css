@@ -169,10 +169,10 @@ html:not(.dark) body {
 .dark .shimmer-text {
   background: linear-gradient(
     90deg,
-    #a5b4fc 0%,
-    #ffffff 40%,
-    #c4b5fd 60%,
-    #a5b4fc 100%
+    #6366f1 0%,
+    #a5b4fc 30%,
+    #ffffff 60%,
+    #c4b5fd 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
