@@ -1,11 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-// pdf-parse is CommonJS — kept out of the bundle via serverExternalPackages
+// pdf-parse v2 is CommonJS — kept out of the bundle via serverExternalPackages
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (
-  buffer: Buffer
-) => Promise<{ text: string; numpages: number }>;
+const { PDFParse } = require("pdf-parse") as {
+  PDFParse: new (opts: { data: Uint8Array }) => { getText(): Promise<{ text: string }> };
+};
 
 const SYSTEM_PROMPT = `You are an academic assistant that extracts structured data from college course syllabuses.
 
@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   let extractedText: string;
   try {
-    const result = await pdfParse(buffer);
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    const result = await parser.getText();
     extractedText = result.text;
   } catch {
     return NextResponse.json(
