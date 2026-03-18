@@ -1,12 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-// pdf-parse v2 is CommonJS — kept out of the bundle via serverExternalPackages
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PDFParse } = require("pdf-parse") as {
-  PDFParse: new (opts: { data: Uint8Array }) => { getText(): Promise<{ text: string }> };
-};
-
 const SYSTEM_PROMPT = `You are an academic assistant that extracts structured data from college course syllabuses.
 
 Extract every assignment, exam, project, and important deadline mentioned in the syllabus.
@@ -34,11 +28,11 @@ Rules:
 - If a field has no items, return an empty array — never omit a key`;
 
 export async function POST(req: NextRequest) {
-  // 0. Validate API key before anything else
+  // 0. Validate API key
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || apiKey === "your_api_key_here") {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured. Add your key to .env.local and restart the server." },
+      { error: "ANTHROPIC_API_KEY is not configured." },
       { status: 503 }
     );
   }
@@ -69,28 +63,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2. Extract text from the PDF
+  // 2. Convert PDF to base64 and send directly to Claude
   const buffer = Buffer.from(await file.arrayBuffer());
-  let extractedText: string;
-  try {
-    const parser = new PDFParse({ data: new Uint8Array(buffer) });
-    const result = await parser.getText();
-    extractedText = result.text;
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to parse PDF. The file may be corrupt or encrypted." },
-      { status: 422 }
-    );
-  }
+  const base64 = buffer.toString("base64");
 
-  if (!extractedText.trim()) {
-    return NextResponse.json(
-      { error: "No text could be extracted from this PDF." },
-      { status: 422 }
-    );
-  }
-
-  // 3. Send to Claude for structured extraction
   let rawJson: string;
   try {
     const message = await anthropic.messages.create({
@@ -100,7 +76,20 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `Here is the syllabus text:\n\n${extractedText}`,
+          content: [
+            {
+              type: "document",
+              source: {
+                type: "base64",
+                media_type: "application/pdf",
+                data: base64,
+              },
+            } as Anthropic.DocumentBlockParam,
+            {
+              type: "text",
+              text: "Extract all assignments, exams, and deadlines from this syllabus.",
+            },
+          ],
         },
       ],
     });
@@ -118,7 +107,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 4. Parse JSON — strip code fences if Claude wrapped it
+  // 3. Parse JSON — strip code fences if Claude wrapped it
   type Parsed = {
     assignments: { name: string; due_date: string | null; points: string | null }[];
     exams:       { name: string; date: string | null; type: string }[];
