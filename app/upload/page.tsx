@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import { SiteHeader } from "../components/ui";
 
 interface UploadedFile {
   name: string;
   size: number;
-  type: string;
 }
 
 function formatBytes(bytes: number) {
@@ -19,33 +19,27 @@ function formatBytes(bytes: number) {
 
 export default function UploadPage() {
   const router = useRouter();
-  const [dragging, setDragging] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  function addFiles(incoming: FileList | null) {
-    if (!incoming) return;
-    const accepted = Array.from(incoming).filter(
-      (f) => f.type === "application/pdf" || f.name.endsWith(".pdf")
-    );
+  const onDrop = useCallback((accepted: File[]) => {
     setFiles((prev) => {
       const existing = new Set(prev.map((f) => f.name));
       const fresh = accepted
         .filter((f) => !existing.has(f.name))
-        .map((f) => ({ name: f.name, size: f.size, type: f.type }));
+        .map((f) => ({ name: f.name, size: f.size }));
       return [...prev, ...fresh];
     });
-  }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "application/pdf": [".pdf"] },
+    multiple: true,
+  });
 
   function removeFile(name: string) {
     setFiles((prev) => prev.filter((f) => f.name !== name));
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragging(false);
-    addFiles(e.dataTransfer.files);
   }
 
   function handleAnalyze() {
@@ -75,44 +69,34 @@ export default function UploadPage() {
 
         {/* Drop zone */}
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
+          {...getRootProps()}
           className={`
             relative cursor-pointer rounded-2xl border-2 border-dashed px-8 py-12 text-center
             transition-all duration-200 select-none
-            ${dragging
-              ? "border-red-500 bg-red-100/60 dark:border-indigo-400 dark:bg-indigo-900/20 scale-[1.01]"
+            ${isDragActive
+              ? "scale-[1.01] border-red-500 bg-red-100/60 dark:border-indigo-400 dark:bg-indigo-900/20"
               : "border-red-200 bg-white hover:border-red-400 hover:bg-red-50/50 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/10"
             }
           `}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            multiple
-            className="hidden"
-            onChange={(e) => addFiles(e.target.files)}
-          />
+          <input {...getInputProps()} />
 
           <div className={`
             mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-3xl
             transition-colors duration-200
-            ${dragging ? "bg-red-200 dark:bg-indigo-800/60" : "bg-red-100 dark:bg-slate-800"}
+            ${isDragActive ? "bg-red-200 dark:bg-indigo-800/60" : "bg-red-100 dark:bg-slate-800"}
           `}>
             📄
           </div>
 
           <p className="text-base font-semibold text-red-900 dark:text-slate-100">
-            {dragging ? "Drop your PDFs here" : "Drag & drop your syllabus PDFs"}
+            {isDragActive ? "Drop your PDFs here" : "Drag & drop your syllabus PDFs"}
           </p>
           <p className="mt-1 text-sm text-red-500 dark:text-slate-500">
             or <span className="font-medium text-red-600 underline underline-offset-2 dark:text-indigo-400">browse files</span> from your device
           </p>
           <p className="mt-4 text-xs text-red-400/70 dark:text-slate-600">
-            Supports PDF &nbsp;·&nbsp; Up to 20 MB per file &nbsp;·&nbsp; Multiple syllabuses welcome
+            PDF only &nbsp;·&nbsp; Up to 20 MB per file &nbsp;·&nbsp; Multiple syllabuses welcome
           </p>
         </div>
 
@@ -124,7 +108,7 @@ export default function UploadPage() {
                 key={file.name}
                 className="flex items-center justify-between rounded-2xl border border-red-100 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/70"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
                   <span className="text-xl">📑</span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">{file.name}</p>
@@ -187,7 +171,7 @@ export default function UploadPage() {
                 Analyzing your semester…
               </span>
             ) : (
-              "Analyze Semester →"
+              "Analyze Syllabus →"
             )}
           </button>
 
