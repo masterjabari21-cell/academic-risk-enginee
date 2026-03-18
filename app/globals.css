@@ -163,7 +163,7 @@ html:not(.dark) body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 4s linear infinite;
+  animation: shimmer 7s linear infinite;
 }
 
 .dark .shimmer-text {

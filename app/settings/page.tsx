@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SiteHeader } from "../components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -118,11 +118,12 @@ function save<T>(key: string, value: T) {
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    // Read the raw (non-JSON-encoded) value written by applyTheme
-    return localStorage.getItem("theme") === "dark" ? "dark" : "light";
-  });
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme") === "dark" ? "dark" : "light";
+    setTimeout(() => setTheme(stored), 0);
+  }, []);
 
   const [notifications, setNotifications] = useState<NotificationSettings>(() =>
     load("gr:notifications", {
