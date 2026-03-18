@@ -51,9 +51,7 @@ export default function Home() {
 
         {/* Headline */}
         <h1 className="animate-fade-up-delay-1 mt-8 text-center text-5xl font-bold leading-[1.1] tracking-tight sm:text-6xl lg:text-7xl">
-          <span className="shimmer-text">Know the risks</span>
-          <br />
-          <span className="shimmer-text">before they know you.</span>
+          <span className="shimmer-text">Know the risks<br />before they know you.</span>
         </h1>
 
         {/* Subheadline */}
