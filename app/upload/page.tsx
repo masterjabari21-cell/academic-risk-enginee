@@ -102,10 +102,10 @@ export default function UploadPage() {
             Step 1 of 2
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-red-900 dark:text-white sm:text-4xl">
-            Upload your syllabus
+            Upload your syllabi
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-red-700/60 dark:text-slate-400">
-            Drop in your course syllabus PDF and GradeRadar will map out your semester — deadlines, workload peaks, and risk windows — automatically.
+            Drop in one or more course syllabus PDFs and GradeRadar will map out your semester — deadlines, workload peaks, and risk windows — automatically.
           </p>
         </div>
 
@@ -127,7 +127,7 @@ export default function UploadPage() {
           </div>
 
           <p className="text-base font-semibold text-red-900 dark:text-slate-100">
-            {isDragActive ? "Drop your PDF here" : "Drag & drop your syllabus PDF"}
+            {isDragActive ? "Drop your PDFs here" : "Drag & drop your syllabi"}
           </p>
           <p className="mt-1 text-sm text-red-500 dark:text-slate-500">
             or <span className="font-medium text-red-600 underline underline-offset-2 dark:text-indigo-400">browse files</span> from your device
@@ -241,7 +241,7 @@ export default function UploadPage() {
                 </svg>
                 {step === "uploading" ? "Extracting text…" : step === "analyzing" ? "Analyzing with AI…" : "Redirecting…"}
               </span>
-            ) : step === "error" ? "Try again" : "Analyze Syllabus →"}
+            ) : step === "error" ? "Try again" : files.length > 1 ? "Analyze Syllabi →" : "Analyze Syllabus →"}
           </button>
 
           {files.length === 0 && step !== "error" && (

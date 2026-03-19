@@ -114,7 +114,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "high-risk",
     label: "High Risk",
-    semester: "Spring 2025",
+    semester: "Spring 2026",
     riskScore: 72,
     riskLabel: "High",
     riskNote: "High-pressure window ahead. Immediate action recommended.",
@@ -127,9 +127,9 @@ const SCENARIOS: Scenario[] = [
     ],
     dangerWeeks: [
       {
-        week: "Mar 24 – Mar 28",
+        week: "Mar 21 – Mar 28",
         load: "Critical",
-        reasons: ["Calculus II midterm", "Data Structures project due", "Physics lab report", "PSY reading quiz"],
+        reasons: ["CS 301 Binary Trees due Mar 21", "MATH 202 Problem Set due Mar 22", "Calculus II midterm Mar 26", "CS 301 midterm Mar 27", "Physics lab report Mar 26"],
       },
       {
         week: "Apr 7 – Apr 11",
@@ -167,7 +167,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "balanced",
     label: "Balanced",
-    semester: "Fall 2024",
+    semester: "Fall 2025",
     riskScore: 44,
     riskLabel: "Medium",
     riskNote: "Manageable workload. Stay consistent and you'll be fine.",

@@ -136,7 +136,7 @@ export default function SettingsPage() {
 
   const [profile, setProfile] = useState<Profile>(() =>
     load("gr:profile", {
-      semester: "spring-2025",
+      semester: "spring-2026",
       standing: "junior",
       gpaGoal: "3.50",
       major: "Computer Science",
@@ -225,10 +225,10 @@ export default function SettingsPage() {
                   value={profile.semester}
                   onChange={(v) => updateProfile("semester", v)}
                   options={[
-                    { value: "fall-2024",   label: "Fall 2024"   },
-                    { value: "spring-2025", label: "Spring 2025" },
-                    { value: "fall-2025",   label: "Fall 2025"   },
                     { value: "spring-2026", label: "Spring 2026" },
+                    { value: "fall-2026",   label: "Fall 2026"   },
+                    { value: "spring-2027", label: "Spring 2027" },
+                    { value: "fall-2027",   label: "Fall 2027"   },
                   ]}
                 />
               </SettingRow>
@@ -347,7 +347,7 @@ export default function SettingsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-red-900 dark:text-slate-100">GradeRadar</p>
-              <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">Version 0.1.0 · Frontend preview · No data leaves your device.</p>
+              <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">Version 1.0.0 · Beta · No data leaves your device.</p>
             </div>
             <div className="flex gap-3 text-xs text-red-400 dark:text-slate-500">
               <button type="button" className="hover:text-red-600 dark:hover:text-slate-300">Privacy</button>

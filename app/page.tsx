@@ -146,7 +146,7 @@ export default function Home() {
             Your academic future starts with a single upload.
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm text-[#9c7a57] dark:text-slate-500">
-            Trusted by student groups and academic advisors who need fast, credible risk insights. Keep your semesters proactive — not reactive.
+            Built for students who want to stay ahead of their semester — not scramble through it. Upload a syllabus and know your risk in minutes.
           </p>
           <Link
             href="/upload"
