@@ -168,7 +168,7 @@ export default function UploadPage() {
 
         {/* Step progress indicator */}
         {busy && (
-          <div className="mt-6 flex items-center justify-center gap-6 text-xs font-medium">
+          <div className="mt-6 flex items-center justify-center gap-3 text-xs font-medium sm:gap-6">
             {STEPS.map(({ key, label }, i) => {
               const order    = { uploading: 0, analyzing: 1, done: 2 } as Record<string, number>;
               const current  = order[step] ?? -1;

@@ -28,7 +28,7 @@ function SettingSection({ title, description, children }: {
 }) {
   return (
     <div className="rounded-2xl border border-red-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="border-b border-red-50 px-5 py-4 dark:border-slate-700">
+      <div className="border-b border-red-100 px-5 py-4 dark:border-slate-700">
         <p className="text-sm font-semibold text-red-900 dark:text-slate-100">{title}</p>
         {description && (
           <p className="mt-0.5 text-xs text-red-600/50 dark:text-slate-500">{description}</p>

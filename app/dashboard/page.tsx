@@ -625,7 +625,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Scenario switcher ── */}
-        <div className="mb-8 flex flex-wrap items-center gap-2">
+        <div className="mb-6 flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
             Test scenario
           </span>
@@ -650,7 +650,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Risk score + courses + recommended actions ── */}
-        <div className="grid gap-4 lg:grid-cols-[240px_1fr_260px]">
+        <div className="grid gap-4 md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr_260px]">
 
           {/* Risk score */}
           <Panel className="flex flex-col items-center justify-center gap-4 p-6 text-center">
@@ -826,7 +826,7 @@ export default function DashboardPage() {
         {/* ── Danger weeks ── */}
         <section className="mt-8">
           <SectionHeading>Danger weeks</SectionHeading>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {s.dangerWeeks.map((w) => {
               const st = WEEK_STYLES[w.load];
               return (

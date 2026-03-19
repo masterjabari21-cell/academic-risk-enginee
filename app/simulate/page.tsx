@@ -255,7 +255,7 @@ export default function SimulatePage() {
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-red-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="overflow-x-auto rounded-2xl border border-red-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
 
             {/* Table header */}
             <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 border-b border-red-50 px-5 py-2.5 dark:border-slate-700">
@@ -274,7 +274,7 @@ export default function SimulatePage() {
                 const targetPts  = GRADE_POINTS[course.targetGrade]  ?? 0;
                 const diff       = targetPts - currentPts;
                 return (
-                  <li key={course.id} className="group grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 px-5 py-3">
+                  <li key={course.id} className="relative group grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-4 px-5 py-3">
 
                     {/* Name + code */}
                     <div className="min-w-0">
