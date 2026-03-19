@@ -12,35 +12,107 @@ type RawAnalysis = {
   deadlines:   { name: string; date: string | null }[];
 };
 
-function rawToScenario(data: RawAnalysis): Scenario {
-  const total     = data.assignments.length + data.exams.length * 1.5 + data.deadlines.length * 0.5;
-  const riskScore = Math.min(95, Math.max(5, Math.round(total * 5)));
-  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
+// ── Risk intelligence helpers ────────────────────────────────────────────────
 
-  // Group items by date to find the busiest weeks
-  const byDate = new Map<string, string[]>();
-  for (const a of data.assignments) {
-    if (a.due_date) byDate.set(a.due_date, [...(byDate.get(a.due_date) ?? []), a.name]);
+function parseDate(str: string): Date | null {
+  if (!str || str === "TBD" || str === "—") return null;
+  // "Mar 21", "March 21", optional year
+  const m = str.match(/^([A-Za-z]+)\s+(\d{1,2})(?:,?\s*(\d{4}))?$/);
+  if (m) {
+    const year = m[3] ? parseInt(m[3]) : 2026;
+    const d = new Date(`${m[1]} ${m[2]}, ${year}`);
+    if (!isNaN(d.getTime())) return d;
   }
-  for (const e of data.exams) {
-    if (e.date) byDate.set(e.date, [...(byDate.get(e.date) ?? []), `${e.name} (${e.type})`]);
+  const d2 = new Date(str);
+  if (!isNaN(d2.getTime())) return d2;
+  return null;
+}
+
+function weekLabel(date: Date): string {
+  const day = date.getDay();
+  const mon = new Date(date);
+  mon.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+  const fri = new Date(mon);
+  fri.setDate(mon.getDate() + 4);
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${fmt(mon)} – ${fmt(fri)}`;
+}
+
+function inferAssignmentRisk(
+  title: string,
+  weight: string,
+  due: string,
+  allAssignments: { title: string; due: string }[],
+  exams: { date: string }[]
+): "high" | "medium" | "low" {
+  const t = title.toLowerCase();
+  const w = parseFloat(weight.replace(/[^0-9.]/g, "")) || 0;
+
+  // Base score: 1=low, 2=medium, 3=high
+  // Read the title carefully — "homework" doesn't mean easy
+  let score = 2;
+  if (/\b(final|capstone|thesis|comprehensive|term paper|research paper|dissertation)\b/.test(t)) score = 3;
+  else if (/\b(midterm|major project|group project|presentation|portfolio|lab report|case study|practicum)\b/.test(t)) score = Math.max(score, 2);
+  else if (/\b(problem set|pset|homework|hw|exercise)\b/.test(t)) score = 2; // NOT low — homework takes real time
+  else if (/\b(essay|paper|report|analysis|critique|review|memo)\b/.test(t)) score = Math.max(score, 2);
+  else if (/\b(quiz|reading|discussion post|reflection|participation|check-in|attendance)\b/.test(t)) score = 1;
+
+  // Weight is the clearest signal of stakes
+  if (w >= 25) score = 3;
+  else if (w >= 15) score = Math.max(score, 2);
+  else if (w > 0 && w <= 3) score = Math.min(score, 1);
+
+  // Proximity: due near other deadlines or an exam → bump risk up
+  const dueDate = parseDate(due);
+  if (dueDate) {
+    const nearby = allAssignments.filter((a) => {
+      if (a.title === title) return false;
+      const d = parseDate(a.due);
+      return d && Math.abs(d.getTime() - dueDate.getTime()) <= 3 * 86400000;
+    });
+    const nearExams = exams.filter((e) => {
+      const d = parseDate(e.date);
+      return d && Math.abs(d.getTime() - dueDate.getTime()) <= 5 * 86400000;
+    });
+    if (nearby.length >= 2 || nearExams.length >= 1) score = Math.min(3, score + 1);
   }
-  const dangerWeeks = [...byDate.entries()]
+
+  return score >= 3 ? "high" : score <= 1 ? "low" : "medium";
+}
+
+function rebuildDangerWeeks(
+  assignments: { title: string; due: string }[],
+  exams: { title: string; date: string }[]
+): { week: string; load: "Critical" | "High" | "Medium"; reasons: string[] }[] {
+  const map = new Map<string, string[]>();
+  for (const a of assignments) {
+    const d = parseDate(a.due);
+    if (!d) continue;
+    const key = weekLabel(d);
+    map.set(key, [...(map.get(key) ?? []), a.title]);
+  }
+  for (const e of exams) {
+    const d = parseDate(e.date);
+    if (!d) continue;
+    const key = weekLabel(d);
+    map.set(key, [...(map.get(key) ?? []), `${e.title} (exam)`]);
+  }
+  return [...map.entries()]
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, 3)
     .map(([week, reasons]) => ({
       week,
-      load: (reasons.length >= 3 ? "Critical" : reasons.length >= 2 ? "High" : "Medium") as "Critical" | "High" | "Medium",
+      load: (reasons.length >= 4 ? "Critical" : reasons.length >= 2 ? "High" : "Medium") as "Critical" | "High" | "Medium",
       reasons,
     }));
+}
 
-  const assignments = data.assignments.map((a) => ({
-    course: "Your course",
-    title: a.name,
-    due: a.due_date ?? "TBD",
-    risk: "medium" as RiskLevel,
-    weight: a.points ?? "—",
-  }));
+// ─────────────────────────────────────────────────────────────────────────────
+
+function rawToScenario(data: RawAnalysis): Scenario {
+  const total     = data.assignments.length + data.exams.length * 1.5 + data.deadlines.length * 0.5;
+  const riskScore = Math.min(95, Math.max(5, Math.round(total * 5)));
+  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
 
   const exams = data.exams.map((e) => ({
     course: "Your course",
@@ -50,6 +122,22 @@ function rawToScenario(data: RawAnalysis): Scenario {
     risk: (e.type === "Final" ? "high" : "medium") as RiskLevel,
     topics: e.type,
   }));
+
+  // Build assignments first (without proximity risk), then re-score with full context
+  const assignmentsRaw = data.assignments.map((a) => ({
+    course: "Your course",
+    title: a.name,
+    due: a.due_date ?? "TBD",
+    risk: "medium" as RiskLevel,
+    weight: a.points ?? "—",
+  }));
+
+  const assignments = assignmentsRaw.map((a) => ({
+    ...a,
+    risk: inferAssignmentRisk(a.title, a.weight, a.due, assignmentsRaw, exams) as RiskLevel,
+  }));
+
+  const dangerWeeks = rebuildDangerWeeks(assignments, exams);
 
   const actions: Scenario["actions"] = [
     ...data.exams.slice(0, 2).map((e, i) => ({
@@ -106,6 +194,15 @@ interface Scenario {
   assignments: { course: string; title: string; due: string; risk: RiskLevel; weight: string }[];
   exams: { course: string; title: string; date: string; prep: string; risk: RiskLevel; topics: string }[];
   actions: { priority: number; label: string; tag: string }[];
+}
+
+function recalcScenario(sc: Scenario): Scenario {
+  const assignments = sc.assignments.map((a) => ({
+    ...a,
+    risk: inferAssignmentRisk(a.title, a.weight, a.due, sc.assignments, sc.exams) as RiskLevel,
+  }));
+  const dangerWeeks = rebuildDangerWeeks(assignments, sc.exams);
+  return { ...sc, assignments, dangerWeeks };
 }
 
 // ── Mock scenarios ──────────────────────────────────────────────────────────
@@ -387,7 +484,8 @@ export default function DashboardPage() {
         const assignments = sc.assignments.map((a, i) =>
           i === idx ? { ...a, due: trimmed } : a
         );
-        return { ...sc, assignments };
+        // Re-score risks and danger weeks now that a date changed
+        return recalcScenario({ ...sc, assignments });
       })
     );
     try {
@@ -401,7 +499,7 @@ export default function DashboardPage() {
 
   function addAssignment() {
     if (!newItem.title.trim()) return;
-    const assignment: Scenario["assignments"][number] = {
+    const base: Scenario["assignments"][number] = {
       course:  newItem.course.trim()  || "Your course",
       title:   newItem.title.trim(),
       due:     newItem.due.trim()     || "TBD",
@@ -409,14 +507,16 @@ export default function DashboardPage() {
       weight:  newItem.weight.trim()  || "—",
     };
     setScenarios((prev) =>
-      prev.map((sc) =>
-        sc.id !== activeId ? sc : { ...sc, assignments: [...sc.assignments, assignment] }
-      )
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        // Re-score the whole scenario including the new item
+        return recalcScenario({ ...sc, assignments: [...sc.assignments, base] });
+      })
     );
     try {
-      const stored: Record<string, typeof assignment[]> =
+      const stored: Record<string, typeof base[]> =
         JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
-      stored[activeId] = [...(stored[activeId] ?? []), assignment];
+      stored[activeId] = [...(stored[activeId] ?? []), base];
       localStorage.setItem("gr:manual-assignments", JSON.stringify(stored));
     } catch { /* ignore */ }
     setNewItem({ title: "", due: "", course: "", weight: "" });
