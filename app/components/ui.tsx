@@ -59,11 +59,48 @@ export function PageShell({
 }
 
 const NAV_LINKS = [
-  { href: "/",          label: "Home"      },
-  { href: "/upload",    label: "Upload"    },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/simulate",  label: "GPA Sim"   },
-  { href: "/settings",  label: "Settings"  },
+  {
+    href: "/", label: "Home",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 6.5L8 2l6 4.5V14H10v-3.5H6V14H2V6.5z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/upload", label: "Upload",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 10V3M5 6l3-3 3 3" /><rect x="2" y="11" width="12" height="3" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    href: "/dashboard", label: "Dashboard",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="2" width="5" height="5" rx="1" /><rect x="9" y="2" width="5" height="5" rx="1" />
+        <rect x="2" y="9" width="5" height="5" rx="1" /><rect x="9" y="9" width="5" height="5" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    href: "/simulate", label: "GPA Sim",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="2,12 5,8 8,10 11,5 14,3" />
+      </svg>
+    ),
+  },
+  {
+    href: "/settings", label: "Settings",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="2.5" />
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42" />
+      </svg>
+    ),
+  },
 ];
 
 export function SiteHeader() {
@@ -113,42 +150,67 @@ export function SiteHeader() {
 
       {/* Slide-in drawer */}
       <div
-        className={`fixed top-0 right-0 z-40 flex h-full w-64 flex-col bg-[#fdf4e7] shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-900 ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 z-40 flex h-full w-72 flex-col shadow-2xl transition-transform duration-300 ease-in-out
+          bg-gradient-to-b from-[#fff8f0] to-[#fdf4e7]
+          dark:bg-none dark:bg-slate-900
+          ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Drawer header */}
-        <div className="flex items-center justify-between border-b border-red-100 px-5 py-4 dark:border-slate-700">
-          <span className="text-sm font-bold tracking-tight text-red-900 dark:text-white">GradeRadar</span>
+        <div className="flex items-center justify-between px-6 pt-6 pb-5">
+          <div>
+            <p className="text-base font-bold tracking-tight text-red-900 dark:text-white">GradeRadar</p>
+            <p className="text-[11px] text-red-400 dark:text-slate-500">Academic risk engine</p>
+          </div>
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Close menu"
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-red-400 transition hover:bg-red-100 hover:text-red-700 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-red-300 transition hover:bg-red-100 hover:text-red-700 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <path d="M1 1l10 10M11 1L1 11" />
             </svg>
           </button>
         </div>
 
+        {/* Divider */}
+        <div className="mx-6 h-px bg-gradient-to-r from-red-200 via-red-100 to-transparent dark:from-slate-700 dark:via-slate-800 dark:to-transparent" />
+
         {/* Nav links */}
-        <nav className="flex flex-col gap-1 p-4">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setOpen(false)}
-              className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
-                isActive(href)
-                  ? "bg-red-100 text-red-900 dark:bg-slate-700 dark:text-white"
-                  : "text-red-700/70 hover:bg-red-50 hover:text-red-900 dark:text-slate-400 dark:hover:bg-slate-700/60 dark:hover:text-white"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
+        <nav className="flex flex-col gap-1 p-4 pt-5">
+          {NAV_LINKS.map(({ href, label, icon }, i) => {
+            const active = isActive(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setOpen(false)}
+                style={{ transitionDelay: open ? `${i * 40}ms` : "0ms" }}
+                className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                  active
+                    ? "bg-red-600 text-white shadow-md shadow-red-200 dark:bg-indigo-600 dark:shadow-indigo-900/40"
+                    : "text-red-800/70 hover:bg-white/80 hover:text-red-900 hover:shadow-sm dark:text-slate-400 dark:hover:bg-slate-700/60 dark:hover:text-white"
+                }`}
+              >
+                <span className={`shrink-0 transition-colors ${active ? "text-white/90" : "text-red-400 group-hover:text-red-600 dark:text-slate-500 dark:group-hover:text-slate-200"}`}>
+                  {icon}
+                </span>
+                {label}
+                {active && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white/70" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
+
+        {/* Footer */}
+        <div className="mt-auto px-6 pb-8">
+          <div className="rounded-2xl bg-red-50 px-4 py-3 dark:bg-slate-800">
+            <p className="text-[11px] font-semibold text-red-500 dark:text-indigo-400">Tip</p>
+            <p className="mt-0.5 text-xs text-red-400/80 dark:text-slate-500">Upload a syllabus to get your personalized risk score.</p>
+          </div>
+        </div>
       </div>
     </>
   );
