@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ButtonHTMLAttributes, ReactNode, useState, useEffect } from "react";
+import { ButtonHTMLAttributes, ReactNode, useState } from "react";
 
 type ButtonVariant = "primary" | "ghost";
 
@@ -107,11 +107,6 @@ export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Lock body scroll when drawer is open
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
 
   function isActive(href: string) {
     return href === "/" ? pathname === "/" : pathname.startsWith(href);
