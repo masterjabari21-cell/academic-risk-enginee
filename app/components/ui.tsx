@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ButtonHTMLAttributes, ReactNode, useState, useEffect, useRef } from "react";
+import { ButtonHTMLAttributes, ReactNode, useState, useEffect } from "react";
 
 type ButtonVariant = "primary" | "ghost";
 
@@ -69,16 +69,11 @@ const NAV_LINKS = [
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
+  // Lock body scroll when drawer is open
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   function isActive(href: string) {
@@ -86,17 +81,16 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-red-100 bg-[#fdf4e7]/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-        <Link href="/" className="text-base font-bold tracking-tight text-red-900 dark:text-white">
-          GradeRadar
-        </Link>
+    <>
+      <header className="sticky top-0 z-20 border-b border-red-100 bg-[#fdf4e7]/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+          <Link href="/" className="text-base font-bold tracking-tight text-red-900 dark:text-white">
+            GradeRadar
+          </Link>
 
-        {/* Nav dropdown */}
-        <div ref={menuRef} className="relative">
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpen(true)}
             aria-label="Open menu"
             className="group flex h-10 w-10 items-center justify-center rounded-2xl border border-red-100 bg-white shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
           >
@@ -106,27 +100,56 @@ export function SiteHeader() {
               <rect x="6" y="11" width="6" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
             </svg>
           </button>
-
-          {open && (
-            <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-red-100 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
-              {NAV_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center px-4 py-2.5 text-sm font-medium transition-colors ${
-                    isActive(href)
-                      ? "bg-red-50 text-red-900 dark:bg-slate-700 dark:text-white"
-                      : "text-red-700/80 hover:bg-red-50 hover:text-red-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          )}
         </div>
+      </header>
+
+      {/* Blurred backdrop */}
+      <div
+        onClick={() => setOpen(false)}
+        className={`fixed inset-0 z-30 bg-black/25 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      />
+
+      {/* Slide-in drawer */}
+      <div
+        className={`fixed top-0 right-0 z-40 flex h-full w-64 flex-col bg-[#fdf4e7] shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-900 ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between border-b border-red-100 px-5 py-4 dark:border-slate-700">
+          <span className="text-sm font-bold tracking-tight text-red-900 dark:text-white">GradeRadar</span>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-red-400 transition hover:bg-red-100 hover:text-red-700 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M1 1l10 10M11 1L1 11" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Nav links */}
+        <nav className="flex flex-col gap-1 p-4">
+          {NAV_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setOpen(false)}
+              className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+                isActive(href)
+                  ? "bg-red-100 text-red-900 dark:bg-slate-700 dark:text-white"
+                  : "text-red-700/70 hover:bg-red-50 hover:text-red-900 dark:text-slate-400 dark:hover:bg-slate-700/60 dark:hover:text-white"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
       </div>
-    </header>
+    </>
   );
 }
