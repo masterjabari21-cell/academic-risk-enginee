@@ -3,28 +3,35 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `You are an academic assistant that extracts structured data from college course syllabuses.
 
-Extract every assignment, exam, project, and important deadline mentioned in the syllabus.
+Extract the course identity, every assignment, exam, project, and important deadline mentioned in the syllabus.
 Be thorough — include all dates you can find. Handle messy, poorly formatted, or incomplete syllabuses gracefully.
 
 Return ONLY valid JSON in exactly this shape (no markdown, no explanation):
 {
+  "courses": [
+    { "name": "string (full course name)", "code": "string (e.g. BIOL 1040)", "credits": number }
+  ],
   "assignments": [
-    { "name": "string", "due_date": "string", "points": "string or null" }
+    { "name": "string", "due_date": "string or null", "points": "string or null", "course_code": "string or null" }
   ],
   "exams": [
-    { "name": "string", "date": "string", "type": "string (Midterm, Final, Quiz, etc.)" }
+    { "name": "string", "date": "string or null", "type": "string (Midterm, Final, Quiz, etc.)", "course_code": "string or null" }
   ],
   "deadlines": [
-    { "name": "string", "date": "string" }
+    { "name": "string", "date": "string or null" }
   ]
 }
 
 Rules:
+- Extract the course name, course code (department + number), and credit hours from the syllabus header or course info section
+- If multiple syllabuses are provided, return one entry per course in "courses"
+- Tag each assignment and exam with its course_code so they can be matched back to the course
 - Use the exact date text from the syllabus (e.g. "September 15", "Week 4", "Oct 3")
-- If a date is missing or unclear → use "TBD"
+- If a date is missing or unclear → use null
+- If credits are not stated → make a reasonable guess (3 for lecture, 4 for lab courses)
 - If a name is garbled or unclear → make your best guess at a readable title
-- If points/weight is not mentioned → use null
-- If the syllabus is incomplete or poorly formatted → extract whatever you can find, never return empty arrays if there is any relevant content
+- If points/weight is not mentioned → use null for points
+- If the syllabus is incomplete or poorly formatted → extract whatever you can find
 - Include projects under "assignments"
 - Include quizzes under "exams"
 - "deadlines" is for anything that doesn't fit the other two (add/drop, withdrawal, reading days, etc.)
@@ -116,8 +123,9 @@ export async function POST(req: NextRequest) {
 
   // 3. Parse JSON — strip code fences if Claude wrapped it
   type Parsed = {
-    assignments: { name: string; due_date: string | null; points: string | null }[];
-    exams:       { name: string; date: string | null; type: string }[];
+    courses:     { name: string; code: string; credits: number }[];
+    assignments: { name: string; due_date: string | null; points: string | null; course_code: string | null }[];
+    exams:       { name: string; date: string | null; type: string; course_code: string | null }[];
     deadlines:   { name: string; date: string | null }[];
   };
 
@@ -137,20 +145,27 @@ export async function POST(req: NextRequest) {
   }
 
   // Sanitize — fill in any missing fields Claude may have skipped
+  const courses = (parsed.courses ?? []).map((c) => ({
+    name:    c.name    || "Unknown Course",
+    code:    c.code    || "???",
+    credits: typeof c.credits === "number" && c.credits > 0 ? c.credits : 3,
+  }));
   const assignments = (parsed.assignments ?? []).map((a) => ({
-    name:     a.name     || "Untitled Assignment",
-    due_date: a.due_date || "TBD",
-    points:   a.points   ?? null,
+    name:        a.name        || "Untitled Assignment",
+    due_date:    a.due_date    || null,
+    points:      a.points      ?? null,
+    course_code: a.course_code ?? null,
   }));
   const exams = (parsed.exams ?? []).map((e) => ({
-    name: e.name || "Untitled Exam",
-    date: e.date || "TBD",
-    type: e.type || "Exam",
+    name:        e.name        || "Untitled Exam",
+    date:        e.date        || null,
+    type:        e.type        || "Exam",
+    course_code: e.course_code ?? null,
   }));
   const deadlines = (parsed.deadlines ?? []).map((d) => ({
     name: d.name || "Untitled Deadline",
-    date: d.date || "TBD",
+    date: d.date || null,
   }));
 
-  return NextResponse.json({ assignments, exams, deadlines });
+  return NextResponse.json({ courses, assignments, exams, deadlines });
 }

@@ -7,8 +7,9 @@ import { SiteHeader } from "../components/ui";
 // ── Transform raw Claude output → Scenario ───────────────────────────────────
 
 type RawAnalysis = {
-  assignments: { name: string; due_date: string | null; points: string | null }[];
-  exams:       { name: string; date: string | null; type: string }[];
+  courses:     { name: string; code: string; credits: number }[];
+  assignments: { name: string; due_date: string | null; points: string | null; course_code: string | null }[];
+  exams:       { name: string; date: string | null; type: string; course_code: string | null }[];
   deadlines:   { name: string; date: string | null }[];
 };
 
@@ -110,12 +111,26 @@ function rebuildDangerWeeks(
 // ─────────────────────────────────────────────────────────────────────────────
 
 function rawToScenario(data: RawAnalysis): Scenario {
+  const courses = (data.courses ?? []).map((c) => ({
+    name: c.name, code: c.code, credits: c.credits,
+  }));
+
+  // Credit load multiplier: 15-16 = baseline; heavy loads amplify risk
+  const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
+  const creditMult =
+    totalCredits >= 20 ? 1.4 :
+    totalCredits >= 18 ? 1.25 :
+    totalCredits >= 17 ? 1.15 :
+    totalCredits >= 15 ? 1.0 :
+    totalCredits >= 12 ? 0.9 :
+    totalCredits >  0  ? 0.8 : 1.0; // unknown load → baseline
+
   const total     = data.assignments.length + data.exams.length * 1.5 + data.deadlines.length * 0.5;
-  const riskScore = Math.min(95, Math.max(5, Math.round(total * 5)));
+  const riskScore = Math.min(95, Math.max(5, Math.round(total * 5 * creditMult)));
   const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
 
   const exams = data.exams.map((e) => ({
-    course: "Your course",
+    course: e.course_code ?? courses[0]?.code ?? "Your course",
     title: e.name,
     date: e.date ?? "TBD",
     prep: "See syllabus",
@@ -125,7 +140,7 @@ function rawToScenario(data: RawAnalysis): Scenario {
 
   // Build assignments first (without proximity risk), then re-score with full context
   const assignmentsRaw = data.assignments.map((a) => ({
-    course: "Your course",
+    course: a.course_code ?? courses[0]?.code ?? "Your course",
     title: a.name,
     due: a.due_date ?? "TBD",
     risk: "medium" as RiskLevel,
@@ -157,10 +172,14 @@ function rawToScenario(data: RawAnalysis): Scenario {
     })),
   ];
 
+  const creditNote = totalCredits >= 18 ? ` · ${totalCredits} credits (heavy load)` :
+                     totalCredits >= 15 ? ` · ${totalCredits} credits` :
+                     totalCredits > 0   ? ` · ${totalCredits} credits (light load)` : "";
+
   const riskNote =
-    riskLabel === "High"   ? `${data.assignments.length} assignments + ${data.exams.length} exams detected. Plan early.` :
-    riskLabel === "Medium" ? `${data.assignments.length} assignments + ${data.exams.length} exams detected. Stay on schedule.` :
-                             `${data.assignments.length} assignments + ${data.exams.length} exams detected. Light load.`;
+    riskLabel === "High"   ? `${data.assignments.length} assignments + ${data.exams.length} exams detected${creditNote}. Plan early.` :
+    riskLabel === "Medium" ? `${data.assignments.length} assignments + ${data.exams.length} exams detected${creditNote}. Stay on schedule.` :
+                             `${data.assignments.length} assignments + ${data.exams.length} exams detected${creditNote}. Light load.`;
 
   return {
     id: "your-analysis",
@@ -169,7 +188,7 @@ function rawToScenario(data: RawAnalysis): Scenario {
     riskScore,
     riskLabel,
     riskNote,
-    courses: [],
+    courses,
     dangerWeeks,
     assignments,
     exams,
@@ -435,8 +454,10 @@ export default function DashboardPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
   const [activeId,  setActiveId]  = useState("high-risk");
   const [editingDate, setEditingDate] = useState<{ idx: number; value: string } | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newItem, setNewItem] = useState({ title: "", due: "", course: "", weight: "" });
+  const [showAddForm,   setShowAddForm]   = useState(false);
+  const [newItem,       setNewItem]       = useState({ title: "", due: "", course: "", weight: "" });
+  const [showAddCourse, setShowAddCourse] = useState(false);
+  const [newCourse,     setNewCourse]     = useState({ name: "", code: "", credits: "" });
 
   useEffect(() => {
     try {
@@ -459,6 +480,13 @@ export default function DashboardPage() {
         JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
       if (manuals["your-analysis"]?.length) {
         real.assignments = [...real.assignments, ...manuals["your-analysis"]];
+      }
+
+      // Restore manually added courses
+      const manualCourses: Record<string, typeof real.courses> =
+        JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
+      if (manualCourses["your-analysis"]?.length) {
+        real.courses = [...real.courses, ...manualCourses["your-analysis"]];
       }
 
       setScenarios([real, ...SCENARIOS]);
@@ -521,6 +549,37 @@ export default function DashboardPage() {
     } catch { /* ignore */ }
     setNewItem({ title: "", due: "", course: "", weight: "" });
     setShowAddForm(false);
+  }
+
+  function addCourse() {
+    if (!newCourse.name.trim() && !newCourse.code.trim()) return;
+    const course = {
+      name:    newCourse.name.trim()    || newCourse.code.trim(),
+      code:    newCourse.code.trim()    || "???",
+      credits: parseInt(newCourse.credits) || 3,
+    };
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        const courses = [...sc.courses, course];
+        const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
+        const creditMult =
+          totalCredits >= 20 ? 1.4 : totalCredits >= 18 ? 1.25 :
+          totalCredits >= 17 ? 1.15 : totalCredits >= 15 ? 1.0 :
+          totalCredits >= 12 ? 0.9 : 0.8;
+        const workload = sc.assignments.length + sc.exams.length * 1.5;
+        const riskScore = Math.min(95, Math.max(5, Math.round(workload * 5 * creditMult)));
+        return { ...sc, courses, riskScore };
+      })
+    );
+    try {
+      const stored: Record<string, typeof course[]> =
+        JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
+      stored[activeId] = [...(stored[activeId] ?? []), course];
+      localStorage.setItem("gr:manual-courses", JSON.stringify(stored));
+    } catch { /* ignore */ }
+    setNewCourse({ name: "", code: "", credits: "" });
+    setShowAddCourse(false);
   }
 
   const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
@@ -606,25 +665,102 @@ export default function DashboardPage() {
           {/* Course list */}
           <Panel className="p-5">
             <SectionHeading>Enrolled courses</SectionHeading>
-            <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
-              {s.courses.map((c) => (
-                <li key={c.code} className="flex items-center justify-between py-2.5">
-                  <div>
-                    <p className="text-sm font-medium text-red-900 dark:text-slate-100">{c.name}</p>
-                    <p className="text-xs text-red-400 dark:text-slate-500">{c.code}</p>
-                  </div>
-                  <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-slate-700 dark:text-slate-300">
-                    {c.credits} cr
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex items-center justify-between rounded-xl bg-red-50 px-4 py-2.5 dark:bg-slate-700/40">
-              <p className="text-xs text-red-600 dark:text-slate-400">Total credit load</p>
-              <p className="text-sm font-bold text-red-900 dark:text-white">
-                {s.courses.reduce((sum, c) => sum + c.credits, 0)} credits
+
+            {s.courses.length === 0 ? (
+              <p className="mb-3 text-xs text-red-400/70 dark:text-slate-500">
+                No courses detected — add them manually below.
               </p>
-            </div>
+            ) : (
+              <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
+                {s.courses.map((c) => (
+                  <li key={c.code} className="flex items-center justify-between py-2.5">
+                    <div>
+                      <p className="text-sm font-medium text-red-900 dark:text-slate-100">{c.name}</p>
+                      <p className="text-xs text-red-400 dark:text-slate-500">{c.code}</p>
+                    </div>
+                    <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-slate-700 dark:text-slate-300">
+                      {c.credits} cr
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Add course form */}
+            {showAddCourse ? (
+              <div className="mt-3 border-t border-red-50 pt-3 dark:border-slate-700/60">
+                <p className="mb-2 text-xs font-semibold text-red-500 dark:text-slate-400">New course</p>
+                <div className="grid gap-2">
+                  <input
+                    placeholder="Course name (e.g. Biology of Plants)"
+                    value={newCourse.name}
+                    onChange={(e) => setNewCourse((p) => ({ ...p, name: e.target.value }))}
+                    className="rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-indigo-500"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Code (e.g. BIOL 1040)"
+                      value={newCourse.code}
+                      onChange={(e) => setNewCourse((p) => ({ ...p, code: e.target.value }))}
+                      className="flex-1 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-indigo-500"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      max="21"
+                      placeholder="Credits"
+                      value={newCourse.credits}
+                      onChange={(e) => setNewCourse((p) => ({ ...p, credits: e.target.value }))}
+                      className="w-24 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={addCourse}
+                    disabled={!newCourse.name.trim() && !newCourse.code.trim()}
+                    className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-40 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddCourse(false); setNewCourse({ name: "", code: "", credits: "" }); }}
+                    className="rounded-lg bg-red-50 px-4 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddCourse(true)}
+                className="mt-3 flex items-center gap-1.5 text-xs font-medium text-red-400 transition hover:text-red-600 dark:text-slate-500 dark:hover:text-slate-300"
+              >
+                <span className="text-base leading-none">+</span> Add course
+              </button>
+            )}
+
+            {/* Credit load summary */}
+            {s.courses.length > 0 && (
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-red-50 px-4 py-2.5 dark:bg-slate-700/40">
+                <p className="text-xs text-red-600 dark:text-slate-400">Total credit load</p>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-red-900 dark:text-white">
+                    {s.courses.reduce((sum, c) => sum + c.credits, 0)} credits
+                  </p>
+                  <p className="text-[10px] text-red-400 dark:text-slate-500">
+                    {s.courses.reduce((sum, c) => sum + c.credits, 0) >= 18
+                      ? "Heavy load · risk amplified"
+                      : s.courses.reduce((sum, c) => sum + c.credits, 0) >= 15
+                      ? "Recommended range"
+                      : "Light load"}
+                  </p>
+                </div>
+              </div>
+            )}
           </Panel>
 
         </div>
