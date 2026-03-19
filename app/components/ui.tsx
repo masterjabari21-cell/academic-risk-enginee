@@ -205,7 +205,7 @@ export function SiteHeader() {
         </nav>
 
         {/* Footer */}
-        <div className="mt-auto px-6 pb-8">
+        <div className="mt-auto px-6 pb-4">
           <div className="rounded-2xl bg-red-50 px-4 py-3 dark:bg-slate-800">
             <p className="text-[11px] font-semibold text-red-500 dark:text-indigo-400">Tip</p>
             <p className="mt-0.5 text-xs text-red-400/80 dark:text-slate-500">Upload a syllabus to get your personalized risk score.</p>
