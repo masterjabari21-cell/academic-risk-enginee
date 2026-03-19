@@ -110,24 +110,127 @@ function rebuildDangerWeeks(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Weighted scoring engine ───────────────────────────────────────────────────
+// Item weights (pts toward raw score)
+const ITEM_PTS = {
+  finalExam:    10,  // highest stakes
+  midterm:       6,
+  quiz:          2,
+  projectHeavy:  8,  // ≥20% weight
+  projectMed:    5,  // 10-19%
+  assignHeavy:   4,  // ≥15%
+  assignMed:     2,
+  assignLight:   0.5,
+  deadline:      0.5,
+};
+
+function scoreItem(
+  title: string,
+  weight: string,
+  isExam: boolean,
+  examType?: string
+): number {
+  const t = (title + " " + (examType ?? "")).toLowerCase();
+  const w = parseFloat(weight?.replace(/[^0-9.]/g, "") ?? "") || 0;
+
+  if (isExam) {
+    if (/final|comprehensive/.test(t)) return ITEM_PTS.finalExam;
+    if (/midterm/.test(t))             return ITEM_PTS.midterm;
+    return ITEM_PTS.quiz;
+  }
+  // Assignment / project
+  if (/capstone|thesis|research paper|term paper|dissertation/.test(t)) return ITEM_PTS.projectHeavy;
+  if (/project|presentation|portfolio|lab report/.test(t))              return ITEM_PTS.projectMed;
+  if (w >= 20) return ITEM_PTS.projectHeavy;
+  if (w >= 15) return ITEM_PTS.assignHeavy;
+  if (w >= 5)  return ITEM_PTS.assignMed;
+  return ITEM_PTS.assignLight;
+}
+
+function computeScore(
+  assignments: { title: string; due: string; weight: string }[],
+  exams:       { title: string; date: string; topics: string }[],
+  deadlines:   { name: string; date: string | null }[],
+  totalCredits: number
+): { riskScore: number; scoreReasons: string[] } {
+  const reasons: string[] = [];
+
+  // 1. Base item score (type-weighted)
+  let base = 0;
+  let finals = 0, midterms = 0, heavyProjects = 0;
+  for (const e of exams) {
+    const pts = scoreItem(e.title, "", true, e.topics);
+    base += pts;
+    if (pts >= ITEM_PTS.finalExam) finals++;
+    else if (pts >= ITEM_PTS.midterm) midterms++;
+  }
+  for (const a of assignments) {
+    const pts = scoreItem(a.title, a.weight, false);
+    base += pts;
+    if (pts >= ITEM_PTS.projectHeavy) heavyProjects++;
+  }
+  base += deadlines.length * ITEM_PTS.deadline;
+
+  if (finals > 0)        reasons.push(`${finals} final exam${finals > 1 ? "s" : ""} on the calendar`);
+  if (midterms > 0)      reasons.push(`${midterms} midterm${midterms > 1 ? "s" : ""} detected`);
+  if (heavyProjects > 0) reasons.push(`${heavyProjects} high-stakes project${heavyProjects > 1 ? "s" : ""} (thesis/capstone/research)`);
+
+  // 2. Cluster penalty — weeks where multiple items pile up
+  const weekCounts = new Map<string, number>();
+  const weekItems  = new Map<string, string[]>();
+  for (const a of assignments) {
+    const d = parseDate(a.due); if (!d) continue;
+    const k = weekLabel(d);
+    weekCounts.set(k, (weekCounts.get(k) ?? 0) + 1);
+    weekItems.set(k, [...(weekItems.get(k) ?? []), a.title]);
+  }
+  for (const e of exams) {
+    const d = parseDate(e.date); if (!d) continue;
+    const k = weekLabel(d);
+    weekCounts.set(k, (weekCounts.get(k) ?? 0) + 1.5); // exams weigh more in clusters
+    weekItems.set(k, [...(weekItems.get(k) ?? []), e.title]);
+  }
+
+  let clusterPenalty = 0;
+  for (const [week, count] of weekCounts) {
+    if (count >= 4) {
+      clusterPenalty += 15;
+      reasons.push(`Critical cluster: ${weekItems.get(week)?.length ?? Math.ceil(count)} items due ${week}`);
+    } else if (count >= 3) {
+      clusterPenalty += 8;
+      reasons.push(`Busy week: ${weekItems.get(week)?.length ?? Math.ceil(count)} items due ${week}`);
+    } else if (count >= 2) {
+      clusterPenalty += 3;
+    }
+  }
+
+  // 3. Credit load multiplier
+  const creditMult =
+    totalCredits >= 20 ? 1.4  :
+    totalCredits >= 18 ? 1.25 :
+    totalCredits >= 17 ? 1.15 :
+    totalCredits >= 15 ? 1.0  :
+    totalCredits >= 12 ? 0.9  :
+    totalCredits >  0  ? 0.8  : 1.0;
+
+  if (totalCredits >= 20) reasons.push(`${totalCredits} credits is an overloaded semester (max recommended: 16)`);
+  else if (totalCredits >= 18) reasons.push(`${totalCredits} credits is a heavy load — risk amplified`);
+  else if (totalCredits >= 15) reasons.push(`${totalCredits} credits — within the recommended range`);
+  else if (totalCredits > 0)   reasons.push(`${totalCredits} credits — lighter load`);
+
+  const raw = (base + clusterPenalty) * creditMult;
+  const riskScore = Math.min(95, Math.max(5, Math.round(raw)));
+  return { riskScore, scoreReasons: reasons };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function rawToScenario(data: RawAnalysis): Scenario {
   const courses = (data.courses ?? []).map((c) => ({
     name: c.name, code: c.code, credits: c.credits,
   }));
 
-  // Credit load multiplier: 15-16 = baseline; heavy loads amplify risk
   const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
-  const creditMult =
-    totalCredits >= 20 ? 1.4 :
-    totalCredits >= 18 ? 1.25 :
-    totalCredits >= 17 ? 1.15 :
-    totalCredits >= 15 ? 1.0 :
-    totalCredits >= 12 ? 0.9 :
-    totalCredits >  0  ? 0.8 : 1.0; // unknown load → baseline
-
-  const total     = data.assignments.length + data.exams.length * 1.5 + data.deadlines.length * 0.5;
-  const riskScore = Math.min(95, Math.max(5, Math.round(total * 5 * creditMult)));
-  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
 
   const exams = data.exams.map((e) => ({
     course: e.course_code ?? courses[0]?.code ?? "Your course",
@@ -138,7 +241,6 @@ function rawToScenario(data: RawAnalysis): Scenario {
     topics: e.type,
   }));
 
-  // Build assignments first (without proximity risk), then re-score with full context
   const assignmentsRaw = data.assignments.map((a) => ({
     course: a.course_code ?? courses[0]?.code ?? "Your course",
     title: a.name,
@@ -153,6 +255,13 @@ function rawToScenario(data: RawAnalysis): Scenario {
   }));
 
   const dangerWeeks = rebuildDangerWeeks(assignments, exams);
+
+  const { riskScore, scoreReasons } = computeScore(assignments, exams, data.deadlines, totalCredits);
+  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
+  const riskNote  =
+    riskLabel === "High"   ? "High-pressure semester. Start early and protect your calendar." :
+    riskLabel === "Medium" ? "Manageable if you stay consistent. Watch the busy weeks." :
+                             "Light load. Good time to get ahead or go deeper on tough material.";
 
   const actions: Scenario["actions"] = [
     ...data.exams.slice(0, 2).map((e, i) => ({
@@ -172,15 +281,6 @@ function rawToScenario(data: RawAnalysis): Scenario {
     })),
   ];
 
-  const creditNote = totalCredits >= 18 ? ` · ${totalCredits} credits (heavy load)` :
-                     totalCredits >= 15 ? ` · ${totalCredits} credits` :
-                     totalCredits > 0   ? ` · ${totalCredits} credits (light load)` : "";
-
-  const riskNote =
-    riskLabel === "High"   ? `${data.assignments.length} assignments + ${data.exams.length} exams detected${creditNote}. Plan early.` :
-    riskLabel === "Medium" ? `${data.assignments.length} assignments + ${data.exams.length} exams detected${creditNote}. Stay on schedule.` :
-                             `${data.assignments.length} assignments + ${data.exams.length} exams detected${creditNote}. Light load.`;
-
   return {
     id: "your-analysis",
     label: "Your Analysis",
@@ -188,6 +288,7 @@ function rawToScenario(data: RawAnalysis): Scenario {
     riskScore,
     riskLabel,
     riskNote,
+    scoreReasons,
     courses,
     dangerWeeks,
     assignments,
@@ -208,6 +309,7 @@ interface Scenario {
   riskScore: number;
   riskLabel: "High" | "Medium" | "Low";
   riskNote: string;
+  scoreReasons: string[];
   courses: { name: string; code: string; credits: number }[];
   dangerWeeks: { week: string; load: WeekLoad; reasons: string[] }[];
   assignments: { course: string; title: string; due: string; risk: RiskLevel; weight: string }[];
@@ -221,7 +323,10 @@ function recalcScenario(sc: Scenario): Scenario {
     risk: inferAssignmentRisk(a.title, a.weight, a.due, sc.assignments, sc.exams) as RiskLevel,
   }));
   const dangerWeeks = rebuildDangerWeeks(assignments, sc.exams);
-  return { ...sc, assignments, dangerWeeks };
+  const totalCredits = sc.courses.reduce((s, c) => s + c.credits, 0);
+  const { riskScore, scoreReasons } = computeScore(assignments, sc.exams, [], totalCredits);
+  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low" as Scenario["riskLabel"];
+  return { ...sc, assignments, dangerWeeks, riskScore, riskLabel, scoreReasons };
 }
 
 // ── Mock scenarios ──────────────────────────────────────────────────────────
@@ -234,6 +339,7 @@ const SCENARIOS: Scenario[] = [
     riskScore: 72,
     riskLabel: "High",
     riskNote: "High-pressure window ahead. Immediate action recommended.",
+    scoreReasons: ["2 midterms in the same week (Mar 26-27)", "CS 301 project due Mar 21 starts the crunch", "17 credits amplifies your workload risk"],
     courses: [
       { name: "Calculus II",         code: "MATH 202", credits: 4 },
       { name: "Data Structures",     code: "CS 301",   credits: 3 },
@@ -287,6 +393,7 @@ const SCENARIOS: Scenario[] = [
     riskScore: 44,
     riskLabel: "Medium",
     riskNote: "Manageable workload. Stay consistent and you'll be fine.",
+    scoreReasons: ["2 midterms in Oct (Oct 17 and Oct 22)", "CS 401 graph project due Nov 20 is worth 18%", "11 credits is a lighter load — risk reduced"],
     courses: [
       { name: "Linear Algebra",      code: "MATH 301", credits: 3 },
       { name: "Algorithms",          code: "CS 401",   credits: 3 },
@@ -337,6 +444,7 @@ const SCENARIOS: Scenario[] = [
     riskScore: 18,
     riskLabel: "Low",
     riskNote: "Low stress semester. Good time to get ahead or explore electives.",
+    scoreReasons: ["No finals or midterms — only quizzes and oral exams", "9 credits is a light summer load", "Assignments are spread out with no heavy clusters"],
     courses: [
       { name: "Art History",         code: "ART 101",  credits: 3 },
       { name: "Intro to Sociology",  code: "SOC 110",  credits: 3 },
@@ -703,6 +811,16 @@ export default function DashboardPage() {
             <p className="text-xs leading-relaxed text-red-400/80 dark:text-slate-500">
               {s.riskNote}
             </p>
+            {s.scoreReasons.length > 0 && (
+              <ul className="mt-3 w-full space-y-1 text-left">
+                {s.scoreReasons.map((r) => (
+                  <li key={r} className="flex items-start gap-1.5 text-[11px] text-red-400/70 dark:text-slate-500">
+                    <span className="mt-0.5 shrink-0 text-red-300 dark:text-slate-600">›</span>
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            )}
           </Panel>
 
           {/* Course list */}
