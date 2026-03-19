@@ -108,7 +108,7 @@ export default function UploadPage() {
             Upload your syllabi
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-red-700/60 dark:text-slate-400">
-            Drop in one or more course syllabus PDFs and GradeRadar will map out your semester — deadlines, workload peaks, and risk windows — automatically.
+            Drop in one or more course syllabus PDFs and Foresite will map out your semester — deadlines, workload peaks, and risk windows — automatically.
           </p>
         </div>
 

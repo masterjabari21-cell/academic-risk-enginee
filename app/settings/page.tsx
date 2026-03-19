@@ -197,7 +197,7 @@ export default function SettingsPage() {
           <div className="space-y-5">
 
             {/* Appearance */}
-            <SettingSection title="Appearance" description="Customize how GradeRadar looks.">
+            <SettingSection title="Appearance" description="Customize how Foresite looks.">
               <SettingRow label="Theme" description="Switch between light and dark mode.">
                 <div className="flex gap-1.5">
                   {(["light", "dark"] as const).map((t) => (
@@ -283,7 +283,7 @@ export default function SettingsPage() {
           <div className="space-y-5">
 
             {/* Notifications */}
-            <SettingSection title="Notifications" description="Control which alerts GradeRadar sends you.">
+            <SettingSection title="Notifications" description="Control which alerts Foresite sends you.">
               <SettingRow label="Deadline Reminders" description="Get reminded 48 hrs before due dates.">
                 <Toggle checked={notifications.deadlineReminders} onChange={() => toggleNotification("deadlineReminders")} />
               </SettingRow>
@@ -299,7 +299,7 @@ export default function SettingsPage() {
             </SettingSection>
 
             {/* Risk preferences */}
-            <SettingSection title="Risk Preferences" description="Adjust how aggressively GradeRadar flags risk.">
+            <SettingSection title="Risk Preferences" description="Adjust how aggressively Foresite flags risk.">
               <SettingRow label="Sensitivity" description="How easily your score reaches 'High' risk.">
                 <Select
                   value={riskSensitivity}
@@ -346,7 +346,7 @@ export default function SettingsPage() {
         <div className="mt-5 rounded-2xl border border-red-100 bg-white px-5 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-red-900 dark:text-slate-100">GradeRadar</p>
+              <p className="text-sm font-semibold text-red-900 dark:text-slate-100">Foresite</p>
               <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">Version 1.0.0 · Beta · No data leaves your device.</p>
             </div>
             <div className="flex gap-3 text-xs text-red-400 dark:text-slate-500">

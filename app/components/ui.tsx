@@ -122,7 +122,7 @@ export function SiteHeader() {
       <header className="sticky top-0 z-20 border-b border-red-100 bg-[#fdf4e7]/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
           <Link href="/" className="text-base font-bold tracking-tight text-red-900 dark:text-white">
-            GradeRadar
+            Foresite
           </Link>
 
           <button
@@ -158,7 +158,7 @@ export function SiteHeader() {
         {/* Drawer header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-5">
           <div>
-            <p className="text-base font-bold tracking-tight text-red-900 dark:text-white">GradeRadar</p>
+            <p className="text-base font-bold tracking-tight text-red-900 dark:text-white">Foresite</p>
             <p className="text-[11px] text-red-400 dark:text-slate-500">Academic risk engine</p>
           </div>
           <button

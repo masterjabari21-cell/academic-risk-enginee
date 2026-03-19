@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GradeRadar",
-  description: "GradeRadar — predict academic risk before it becomes a crisis.",
+  title: "Foresite",
+  description: "Foresite — predict academic risk before it becomes a crisis.",
 };
 
 export default function RootLayout({
