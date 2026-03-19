@@ -81,6 +81,8 @@ export default function UploadPage() {
       localStorage.setItem("gr:analysis", JSON.stringify(data));
 
       setStep("done");
+      // Hold on "done" briefly so user sees the success state
+      await new Promise((r) => setTimeout(r, 1000));
       router.push("/dashboard");
     } catch (err) {
       setStep("error");
@@ -193,6 +195,17 @@ export default function UploadPage() {
           </div>
         )}
 
+        {/* Success */}
+        {step === "done" && (
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800/50 dark:bg-green-950/20">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500 text-xs font-bold text-white">✓</span>
+            <div>
+              <p className="text-sm font-semibold text-green-800 dark:text-green-400">Analysis complete</p>
+              <p className="text-xs text-green-600/80 dark:text-green-500">Redirecting to your dashboard…</p>
+            </div>
+          </div>
+        )}
+
         {/* Error */}
         {step === "error" && errorMsg && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
@@ -256,13 +269,18 @@ export default function UploadPage() {
           )}
         </div>
 
-        {/* Skip link */}
-        <p className="mt-8 text-center text-xs text-red-400/50 dark:text-slate-600">
-          Want to see results first?{" "}
-          <Link href="/dashboard" className="underline underline-offset-2 hover:text-red-600 dark:hover:text-indigo-400">
-            View sample dashboard
+        {/* Skip / Try Demo */}
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <p className="text-center text-xs text-red-400/50 dark:text-slate-600">
+            Don&apos;t have a syllabus handy?
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-4 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <span>▶</span> Try Demo
           </Link>
-        </p>
+        </div>
 
       </main>
     </div>

@@ -624,10 +624,24 @@ export default function DashboardPage() {
           </Link>
         </div>
 
+        {/* Demo mode banner */}
+        {activeId !== "your-analysis" && (
+          <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800/40 dark:bg-amber-950/15">
+            <span className="text-sm">👀</span>
+            <p className="text-xs text-amber-800 dark:text-amber-400">
+              You&apos;re viewing <span className="font-semibold">sample data</span> —{" "}
+              <Link href="/upload" className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
+                upload a syllabus
+              </Link>{" "}
+              to see your own risk score.
+            </p>
+          </div>
+        )}
+
         {/* ── Scenario switcher ── */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
-            Test scenario
+            Sample scenarios
           </span>
           {scenarios.map((sc) => (
             <button
