@@ -98,12 +98,12 @@ export function SiteHeader() {
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label="Open menu"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-red-100 bg-white shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+            className="group flex h-10 w-10 items-center justify-center rounded-2xl border border-red-100 bg-white shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
           >
             <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="1" width="14" height="2" rx="1" className="fill-red-900 dark:fill-slate-100" />
-              <rect x="4" y="6" width="10" height="2" rx="1" className="fill-red-900 dark:fill-slate-100" />
-              <rect x="6" y="11" width="6" height="2" rx="1" className="fill-red-900 dark:fill-slate-100" />
+              <rect x="2" y="1" width="14" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
+              <rect x="4" y="6" width="10" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
+              <rect x="6" y="11" width="6" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
             </svg>
           </button>
 
