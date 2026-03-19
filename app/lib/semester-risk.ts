@@ -163,15 +163,25 @@ export function computeSemesterRisk(
     score >= 60 ? "High" : score >= 35 ? "Medium" : "Low";
 
   // Build explanation sentence
-  const dangerStr =
-    dangerCount === 0 ? "no high-density weeks" :
-    dangerCount === 1 ? "1 high-density week" :
-    `${dangerCount} high-density weeks`;
-  const examStr = examCount === 1 ? "1 exam" : `${examCount} exams`;
+  const peakCount  = weekCounts.get(maxWeekKey) ?? 0;
+  const creditNote =
+    totalCredits >= 18 ? `, amplified by a ${totalCredits}-credit load` :
+    totalCredits >= 15 ? `, with a standard ${totalCredits}-credit load` :
+    totalCredits > 0   ? `, softened by a lighter ${totalCredits}-credit load` : "";
+
   const explanation =
-    `${avgLoad.toFixed(1)} avg weighted items/week across ${totalWeeks} active weeks, ` +
-    `peaking at ${weekCounts.get(maxWeekKey) ?? 0} items during ${maxWeekKey}. ` +
-    `${examStr} this semester with ${dangerStr}.`;
+    label === "High"
+      ? `Your workload spikes hard around ${maxWeekKey} with ${peakCount} items due — ` +
+        `${dangerCount > 1 ? `${dangerCount} weeks hit heavy` : "that week hits heavy"}` +
+        (examCount > 0 ? ` and ${examCount === 1 ? "an exam" : `${examCount} exams`} add real pressure` : "") +
+        `${creditNote}.`
+      : label === "Medium"
+      ? `Workload is manageable but ${maxWeekKey} is your crunch point with ${peakCount} items` +
+        (examCount > 0 ? ` — ${examCount === 1 ? "1 exam" : `${examCount} exams`} keep the stakes real` : "") +
+        `${creditNote}.`
+      : `Spread out well — ${maxWeekKey} is your busiest stretch at ${peakCount} items` +
+        (examCount > 0 ? `, and with only ${examCount === 1 ? "1 exam" : `${examCount} exams`} you have room to breathe` : "") +
+        `${creditNote}.`;
 
   // Build bullet reasons
   reasons.push(`Avg load ${avgLoad.toFixed(1)} items/week across ${totalWeeks} active weeks`);
