@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "../components/ui";
+import { normalizeItems } from "../lib/normalize";
 
 // ── Transform raw Claude output → Scenario ───────────────────────────────────
 
@@ -232,31 +233,43 @@ function rawToScenario(data: RawAnalysis): Scenario {
 
   const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
 
-  const exams = data.exams.map((e) => ({
-    course: e.course_code ?? courses[0]?.code ?? "Your course",
-    title: e.name,
-    date: e.date ?? "TBD",
-    prep: "See syllabus",
-    risk: (e.type === "Final" ? "high" : "medium") as RiskLevel,
-    topics: e.type,
-  }));
+  // Normalize all syllabus items into a single clean array first,
+  // then derive the typed arrays the dashboard needs from it.
+  const allItems = normalizeItems(data);
+  const fallbackCourse = courses[0]?.code ?? "Your course";
 
-  const assignmentsRaw = data.assignments.map((a) => ({
-    course: a.course_code ?? courses[0]?.code ?? "Your course",
-    title: a.name,
-    due: a.due_date ?? "TBD",
-    risk: "medium" as RiskLevel,
-    weight: a.points ?? "—",
-  }));
+  const exams = allItems
+    .filter((i) => i.type === "exam" || i.type === "quiz")
+    .map((i) => ({
+      course: i.courseCode ?? fallbackCourse,
+      title:  i.title,
+      date:   i.dueDate ?? "TBD",
+      prep:   "See syllabus",
+      risk:   (/final/i.test(i.notes ?? "") ? "high" : "medium") as RiskLevel,
+      topics: i.notes ?? i.type,
+    }));
+
+  const assignmentsRaw = allItems
+    .filter((i) => i.type === "assignment" || i.type === "project")
+    .map((i) => ({
+      course: i.courseCode ?? fallbackCourse,
+      title:  i.title,
+      due:    i.dueDate ?? "TBD",
+      risk:   "medium" as RiskLevel,
+      weight: i.weight ?? "—",
+    }));
 
   const assignments = assignmentsRaw.map((a) => ({
     ...a,
     risk: inferAssignmentRisk(a.title, a.weight, a.due, assignmentsRaw, exams) as RiskLevel,
   }));
 
+  // Deadlines for scoring only (not rendered separately)
+  const deadlineItems = allItems.filter((i) => i.type === "deadline");
+
   const dangerWeeks = rebuildDangerWeeks(assignments, exams);
 
-  const { riskScore, scoreReasons } = computeScore(assignments, exams, data.deadlines, totalCredits);
+  const { riskScore, scoreReasons } = computeScore(assignments, exams, deadlineItems.map((d) => ({ name: d.title, date: d.dueDate })), totalCredits);
   const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
   const riskNote  =
     riskLabel === "High"   ? "High-pressure semester. Start early and protect your calendar." :
