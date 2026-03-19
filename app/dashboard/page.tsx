@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { SiteHeader } from "../components/ui";
 import { normalizeItems } from "../lib/normalize";
 import { identifyDangerWeeks } from "../lib/danger-weeks";
+import { computeSemesterRisk, generateRecommendations, type RiskItem } from "../lib/semester-risk";
 
 // ── Transform raw Claude output → Scenario ───────────────────────────────────
 
@@ -31,15 +32,6 @@ function parseDate(str: string): Date | null {
   return null;
 }
 
-function weekLabel(date: Date): string {
-  const day = date.getDay();
-  const mon = new Date(date);
-  mon.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
-  const fri = new Date(mon);
-  fri.setDate(mon.getDate() + 4);
-  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${fmt(mon)} – ${fmt(fri)}`;
-}
 
 function inferAssignmentRisk(
   title: string,
@@ -86,119 +78,6 @@ function inferAssignmentRisk(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Weighted scoring engine ───────────────────────────────────────────────────
-// Item weights (pts toward raw score)
-const ITEM_PTS = {
-  finalExam:    10,  // highest stakes
-  midterm:       6,
-  quiz:          2,
-  projectHeavy:  8,  // ≥20% weight
-  projectMed:    5,  // 10-19%
-  assignHeavy:   4,  // ≥15%
-  assignMed:     2,
-  assignLight:   0.5,
-  deadline:      0.5,
-};
-
-function scoreItem(
-  title: string,
-  weight: string,
-  isExam: boolean,
-  examType?: string
-): number {
-  const t = (title + " " + (examType ?? "")).toLowerCase();
-  const w = parseFloat(weight?.replace(/[^0-9.]/g, "") ?? "") || 0;
-
-  if (isExam) {
-    if (/final|comprehensive/.test(t)) return ITEM_PTS.finalExam;
-    if (/midterm/.test(t))             return ITEM_PTS.midterm;
-    return ITEM_PTS.quiz;
-  }
-  // Assignment / project
-  if (/capstone|thesis|research paper|term paper|dissertation/.test(t)) return ITEM_PTS.projectHeavy;
-  if (/project|presentation|portfolio|lab report/.test(t))              return ITEM_PTS.projectMed;
-  if (w >= 20) return ITEM_PTS.projectHeavy;
-  if (w >= 15) return ITEM_PTS.assignHeavy;
-  if (w >= 5)  return ITEM_PTS.assignMed;
-  return ITEM_PTS.assignLight;
-}
-
-function computeScore(
-  assignments: { title: string; due: string; weight: string }[],
-  exams:       { title: string; date: string; topics: string }[],
-  deadlines:   { name: string; date: string | null }[],
-  totalCredits: number
-): { riskScore: number; scoreReasons: string[] } {
-  const reasons: string[] = [];
-
-  // 1. Base item score (type-weighted)
-  let base = 0;
-  let finals = 0, midterms = 0, heavyProjects = 0;
-  for (const e of exams) {
-    const pts = scoreItem(e.title, "", true, e.topics);
-    base += pts;
-    if (pts >= ITEM_PTS.finalExam) finals++;
-    else if (pts >= ITEM_PTS.midterm) midterms++;
-  }
-  for (const a of assignments) {
-    const pts = scoreItem(a.title, a.weight, false);
-    base += pts;
-    if (pts >= ITEM_PTS.projectHeavy) heavyProjects++;
-  }
-  base += deadlines.length * ITEM_PTS.deadline;
-
-  if (finals > 0)        reasons.push(`${finals} final exam${finals > 1 ? "s" : ""} on the calendar`);
-  if (midterms > 0)      reasons.push(`${midterms} midterm${midterms > 1 ? "s" : ""} detected`);
-  if (heavyProjects > 0) reasons.push(`${heavyProjects} high-stakes project${heavyProjects > 1 ? "s" : ""} (thesis/capstone/research)`);
-
-  // 2. Cluster penalty — weeks where multiple items pile up
-  const weekCounts = new Map<string, number>();
-  const weekItems  = new Map<string, string[]>();
-  for (const a of assignments) {
-    const d = parseDate(a.due); if (!d) continue;
-    const k = weekLabel(d);
-    weekCounts.set(k, (weekCounts.get(k) ?? 0) + 1);
-    weekItems.set(k, [...(weekItems.get(k) ?? []), a.title]);
-  }
-  for (const e of exams) {
-    const d = parseDate(e.date); if (!d) continue;
-    const k = weekLabel(d);
-    weekCounts.set(k, (weekCounts.get(k) ?? 0) + 1.5); // exams weigh more in clusters
-    weekItems.set(k, [...(weekItems.get(k) ?? []), e.title]);
-  }
-
-  let clusterPenalty = 0;
-  for (const [week, count] of weekCounts) {
-    if (count >= 4) {
-      clusterPenalty += 15;
-      reasons.push(`Critical cluster: ${weekItems.get(week)?.length ?? Math.ceil(count)} items due ${week}`);
-    } else if (count >= 3) {
-      clusterPenalty += 8;
-      reasons.push(`Busy week: ${weekItems.get(week)?.length ?? Math.ceil(count)} items due ${week}`);
-    } else if (count >= 2) {
-      clusterPenalty += 3;
-    }
-  }
-
-  // 3. Credit load multiplier
-  const creditMult =
-    totalCredits >= 20 ? 1.4  :
-    totalCredits >= 18 ? 1.25 :
-    totalCredits >= 17 ? 1.15 :
-    totalCredits >= 15 ? 1.0  :
-    totalCredits >= 12 ? 0.9  :
-    totalCredits >  0  ? 0.8  : 1.0;
-
-  if (totalCredits >= 20) reasons.push(`${totalCredits} credits is an overloaded semester (max recommended: 16)`);
-  else if (totalCredits >= 18) reasons.push(`${totalCredits} credits is a heavy load — risk amplified`);
-  else if (totalCredits >= 15) reasons.push(`${totalCredits} credits — within the recommended range`);
-  else if (totalCredits > 0)   reasons.push(`${totalCredits} credits — lighter load`);
-
-  const raw = (base + clusterPenalty) * creditMult;
-  const riskScore = Math.min(95, Math.max(5, Math.round(raw)));
-  return { riskScore, scoreReasons: reasons };
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 function rawToScenario(data: RawAnalysis): Scenario {
@@ -239,38 +118,26 @@ function rawToScenario(data: RawAnalysis): Scenario {
     risk: inferAssignmentRisk(a.title, a.weight, a.due, assignmentsRaw, exams) as RiskLevel,
   }));
 
-  // Deadlines for scoring only (not rendered separately)
-  const deadlineItems = allItems.filter((i) => i.type === "deadline");
-
   const dangerWeeks = identifyDangerWeeks([
     ...assignments.map((a) => ({ title: a.title, kind: "assignment" as const, date: a.due, weight: a.weight })),
     ...exams.map((e) => ({ title: e.title, kind: "exam" as const, date: e.date })),
   ]);
 
-  const { riskScore, scoreReasons } = computeScore(assignments, exams, deadlineItems.map((d) => ({ name: d.title, date: d.dueDate })), totalCredits);
-  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
-  const riskNote  =
-    riskLabel === "High"   ? "High-pressure semester. Start early and protect your calendar." :
-    riskLabel === "Medium" ? "Manageable if you stay consistent. Watch the busy weeks." :
-                             "Light load. Good time to get ahead or go deeper on tough material.";
+  const workloadItems: RiskItem[] = allItems.map((i) => ({
+    title:  i.title,
+    kind:   i.type as RiskItem["kind"],
+    date:   i.dueDate,
+    weight: i.weight,
+  }));
+  const { score: riskScore, label: riskLabel, explanation: riskNote, scoreReasons } =
+    computeSemesterRisk(workloadItems, totalCredits);
 
-  const actions: Scenario["actions"] = [
-    ...data.exams.slice(0, 2).map((e, i) => ({
-      priority: i + 1,
-      label: `Prepare for ${e.name}${e.date ? ` on ${e.date}` : ""} — start studying early`,
-      tag: e.type === "Final" ? "Final exam" : "Exam",
-    })),
-    ...data.assignments.filter((a) => a.points != null).slice(0, 2).map((a, i) => ({
-      priority: i + 3,
-      label: `${a.name}${a.due_date ? ` — due ${a.due_date}` : ""}${a.points ? ` (${a.points})` : ""}`,
-      tag: "Assignment",
-    })),
-    ...data.deadlines.slice(0, 2).map((d, i) => ({
-      priority: i + 5,
-      label: `Don't miss: ${d.name}${d.date ? ` on ${d.date}` : ""}`,
-      tag: "Deadline",
-    })),
-  ];
+  const recs = generateRecommendations(workloadItems, dangerWeeks);
+  const actions: Scenario["actions"] = recs.map((r, i) => ({
+    priority: i + 1,
+    label: r.label,
+    tag: r.tag,
+  }));
 
   return {
     id: "your-analysis",
@@ -318,9 +185,15 @@ function recalcScenario(sc: Scenario): Scenario {
     ...sc.exams.map((e) => ({ title: e.title, kind: "exam" as const, date: e.date })),
   ]);
   const totalCredits = sc.courses.reduce((s, c) => s + c.credits, 0);
-  const { riskScore, scoreReasons } = computeScore(assignments, sc.exams, [], totalCredits);
-  const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low" as Scenario["riskLabel"];
-  return { ...sc, assignments, dangerWeeks, riskScore, riskLabel, scoreReasons };
+  const workloadItems: RiskItem[] = [
+    ...assignments.map((a) => ({ title: a.title, kind: "assignment" as const, date: a.due, weight: a.weight })),
+    ...sc.exams.map((e)    => ({ title: e.title, kind: "exam"       as const, date: e.date })),
+  ];
+  const { score: riskScore, label: riskLabel, explanation: riskNote, scoreReasons } =
+    computeSemesterRisk(workloadItems, totalCredits);
+  const recs = generateRecommendations(workloadItems, dangerWeeks);
+  const actions: Scenario["actions"] = recs.map((r, i) => ({ priority: i + 1, label: r.label, tag: r.tag }));
+  return { ...sc, assignments, dangerWeeks, riskScore, riskLabel, riskNote, scoreReasons, actions };
 }
 
 // ── Mock scenarios ──────────────────────────────────────────────────────────
