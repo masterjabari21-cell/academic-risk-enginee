@@ -199,157 +199,270 @@ function recalcScenario(sc: Scenario): Scenario {
 // ── Mock scenarios ──────────────────────────────────────────────────────────
 
 const SCENARIOS: Scenario[] = [
+  // ── Scenario 1: Heavy Load ────────────────────────────────────────────────
+  // Spring 2026 · 18 credits · CS/Engineering student
+  // Key pressure points: two project deadlines before spring break, three finals on consecutive days
   {
-    id: "high-risk",
-    label: "High Risk",
+    id: "heavy-load",
+    label: "Heavy Load",
     semester: "Spring 2026",
-    riskScore: 72,
+    riskScore: 76,
     riskLabel: "High",
-    riskNote: "High-pressure window ahead. Immediate action recommended.",
-    scoreReasons: ["2 midterms in the same week (Mar 26-27)", "CS 301 project due Mar 21 starts the crunch", "17 credits amplifies your workload risk"],
+    riskNote: "Your workload spikes hard around Mar 2 – Mar 6 with 3 items due — 3 weeks hit heavy and 8 exams add real pressure, amplified by an 18-credit load.",
+    scoreReasons: [
+      "18 credits amplifies every risk component by 1.35×",
+      "3 finals land on consecutive days: May 5, 6, and 7",
+      "Mar 2–6 peaks with 2 assignments + a midterm within 48 hrs",
+      "CS 3510 projects total 50% of that course grade",
+    ],
     courses: [
-      { name: "Calculus II",         code: "MATH 202", credits: 4 },
-      { name: "Data Structures",     code: "CS 301",   credits: 3 },
-      { name: "Physics I",           code: "PHYS 101", credits: 4 },
-      { name: "English Composition", code: "ENG 110",  credits: 3 },
-      { name: "Intro to Psychology", code: "PSY 101",  credits: 3 },
+      { name: "Algorithms & Complexity",  code: "CS 3510",   credits: 3 },
+      { name: "Differential Equations",   code: "MATH 2420", credits: 4 },
+      { name: "Physics II: E&M",          code: "PHYS 2211", credits: 4 },
+      { name: "Technical Writing",        code: "ENG 3050",  credits: 3 },
+      { name: "Principles of Chemistry",  code: "CHEM 1310", credits: 4 },
     ],
     dangerWeeks: [
       {
-        week: "Mar 21 – Mar 28",
+        week: "Mar 2 – Mar 6",
         load: "Critical",
-        reasons: ["CS 301 Binary Trees due Mar 21", "MATH 202 Problem Set due Mar 22", "Calculus II midterm Mar 26", "CS 301 midterm Mar 27", "Physics lab report Mar 26"],
+        reasons: [
+          "MATH 2420 Problem Set 5 due Mar 6",
+          "CHEM 1310 Titration Lab Report due Mar 6",
+          "PHYS 2211 Midterm I is 2 days away on Mar 4 — no buffer",
+        ],
+        actions: [
+          "Finish both due assignments by Mar 4 so Wed–Thu is pure PHYS review",
+          "Go to PHYS office hours Mon or Tue — electric potential questions are common exam stumpers",
+        ],
       },
       {
         week: "Apr 7 – Apr 11",
-        load: "High",
-        reasons: ["Physics I midterm", "English essay due", "CS 301 homework set"],
+        load: "Critical",
+        reasons: [
+          "MATH 2420 Midterm II on Apr 8 — hardest material of the semester",
+          "CS 3510 Dynamic Programming Project (20%) due Apr 17 — prep week begins now",
+          "PHYS 2211 Lab Report: Magnetic Fields due Apr 3 — grading turnaround overlaps",
+        ],
+        actions: [
+          "Block Mon–Tue entirely for MATH Midterm II review — series solutions need full attention",
+          "Stub out the CS DP project structure this week so you aren't starting cold Apr 11",
+        ],
       },
       {
-        week: "Apr 28 – May 2",
-        load: "High",
-        reasons: ["Final exam period begins", "MATH 202 final", "Group project presentations"],
+        week: "May 4 – May 8",
+        load: "Critical",
+        reasons: [
+          "PHYS 2211 Final on May 5 — cumulative, includes optics and E&M",
+          "MATH 2420 Final on May 6 — comprehensive ODE exam",
+          "CS 3510 Final on May 7 — algorithms and complexity analysis",
+        ],
+        actions: [
+          "Three finals on consecutive days — build a topic-by-topic review calendar starting Apr 21",
+          "ENG 3050 Final Report (due May 1) must be fully submitted before finals week starts",
+        ],
       },
     ],
     assignments: [
-      { course: "CS 301",   title: "Binary Trees Implementation", due: "Mar 21", risk: "high",   weight: "15%" },
-      { course: "MATH 202", title: "Problem Set 8",               due: "Mar 22", risk: "medium", weight: "5%"  },
-      { course: "PHYS 101", title: "Lab Report — Wave Motion",    due: "Mar 26", risk: "high",   weight: "10%" },
-      { course: "ENG 110",  title: "Argumentative Essay Draft",   due: "Apr 4",  risk: "medium", weight: "20%" },
-      { course: "PSY 101",  title: "Chapter 9–11 Reading Quiz",   due: "Mar 24", risk: "low",    weight: "5%"  },
-      { course: "MATH 202", title: "Problem Set 9",               due: "Mar 29", risk: "low",    weight: "5%"  },
+      { course: "CS 3510",   title: "Sorting Algorithms Implementation", due: "Feb 20", risk: "medium", weight: "12%" },
+      { course: "PHYS 2211", title: "Lab Report: Coulomb's Law",         due: "Feb 27", risk: "medium", weight: "8%"  },
+      { course: "MATH 2420", title: "Problem Set 5",                     due: "Mar 6",  risk: "medium", weight: "6%"  },
+      { course: "CHEM 1310", title: "Lab Report: Acid-Base Titration",   due: "Mar 6",  risk: "medium", weight: "8%"  },
+      { course: "CS 3510",   title: "Graph Traversal Project",           due: "Mar 20", risk: "high",   weight: "18%" },
+      { course: "ENG 3050",  title: "Technical Report — First Draft",    due: "Mar 27", risk: "medium", weight: "15%" },
+      { course: "PHYS 2211", title: "Lab Report: Magnetic Fields",       due: "Apr 3",  risk: "low",    weight: "8%"  },
+      { course: "CS 3510",   title: "Dynamic Programming Project",       due: "Apr 17", risk: "high",   weight: "20%" },
+      { course: "MATH 2420", title: "Problem Set 9",                     due: "Apr 24", risk: "low",    weight: "6%"  },
+      { course: "ENG 3050",  title: "Final Technical Report",            due: "May 1",  risk: "high",   weight: "30%" },
     ],
     exams: [
-      { course: "MATH 202", title: "Midterm II",  date: "Mar 26", prep: "3 days", risk: "high",   topics: "Integration by parts, Series"   },
-      { course: "CS 301",   title: "Midterm",     date: "Mar 27", prep: "2 days", risk: "high",   topics: "Trees, Graphs, Sorting"         },
-      { course: "PHYS 101", title: "Midterm II",  date: "Apr 9",  prep: "5 days", risk: "medium", topics: "Waves, Thermodynamics"          },
-      { course: "PSY 101",  title: "Unit 3 Exam", date: "Apr 14", prep: "7 days", risk: "low",    topics: "Cognition, Memory, Learning"    },
+      { course: "MATH 2420", title: "Midterm I",  date: "Feb 25", prep: "4 days", risk: "high",   topics: "First-order ODEs, Laplace transforms, initial value problems" },
+      { course: "PHYS 2211", title: "Midterm I",  date: "Mar 4",  prep: "3 days", risk: "high",   topics: "Electrostatics, Gauss's Law, electric potential"              },
+      { course: "CS 3510",   title: "Midterm",    date: "Mar 11", prep: "4 days", risk: "medium", topics: "Divide & conquer, greedy algorithms, dynamic programming intro" },
+      { course: "CHEM 1310", title: "Midterm",    date: "Mar 25", prep: "5 days", risk: "medium", topics: "Thermodynamics, chemical kinetics, equilibrium"               },
+      { course: "MATH 2420", title: "Midterm II", date: "Apr 8",  prep: "5 days", risk: "high",   topics: "Series solutions, systems of ODEs, phase plane analysis"      },
+      { course: "PHYS 2211", title: "Final",      date: "May 5",  prep: "7 days", risk: "high",   topics: "Full semester: E&M, circuits, magnetism, optics"             },
+      { course: "MATH 2420", title: "Final",      date: "May 6",  prep: "7 days", risk: "high",   topics: "Comprehensive — all ODE types and applications"              },
+      { course: "CS 3510",   title: "Final",      date: "May 7",  prep: "5 days", risk: "medium", topics: "Algorithm design, complexity, NP-completeness"               },
     ],
     actions: [
-      { priority: 1, label: "Start CS 301 Binary Trees today — due in 4 days",             tag: "Urgent"      },
-      { priority: 2, label: "Block 3 hrs/day Mar 23–25 for MATH 202 midterm prep",         tag: "Study block" },
-      { priority: 3, label: "Draft Physics lab outline before Mar 24 crunch week",          tag: "Get ahead"   },
-      { priority: 4, label: "Visit office hours for Calculus II series problems",           tag: "Support"     },
-      { priority: 5, label: "Outline English essay this weekend to avoid Apr crunch",       tag: "Plan ahead"  },
+      { priority: 1, label: "CS 3510 Graph Traversal Project (18%) is due Mar 20 — start coding by Mar 9 so spring break doesn't eat your runway", tag: "Schedule conflict" },
+      { priority: 2, label: "Mar 2–6 has 2 assignments due with PHYS Midterm I two days later — clear MATH PS5 by Mar 3 and CHEM lab by Mar 4",    tag: "Front-load"        },
+      { priority: 3, label: "May 5–7 is three finals back-to-back — build a study-by-subject calendar starting the week of Apr 20",               tag: "Study plan"        },
+      { priority: 4, label: "ENG Final Report (30%) is due May 1 — rough outline it now before Apr midterm season shuts down any free time",       tag: "Get ahead"         },
+      { priority: 5, label: "Spring break (Mar 16–20): no deadlines — use it to draft the ENG report and start CHEM Midterm review",              tag: "Get ahead"         },
     ],
   },
+
+  // ── Scenario 2: Steady Pace ───────────────────────────────────────────────
+  // Fall 2025 · 15 credits · Business/Social Science student
+  // Key pattern: midterm month (Oct 8–29) with 4 exams in 3 weeks, manageable if spread out
   {
-    id: "balanced",
-    label: "Balanced",
+    id: "steady-pace",
+    label: "Steady Pace",
     semester: "Fall 2025",
-    riskScore: 44,
+    riskScore: 47,
     riskLabel: "Medium",
-    riskNote: "Manageable workload. Stay consistent and you'll be fine.",
-    scoreReasons: ["2 midterms in Oct (Oct 17 and Oct 22)", "CS 401 graph project due Nov 20 is worth 18%", "11 credits is a lighter load — risk reduced"],
+    riskNote: "Workload is manageable but Oct 13 – Oct 17 is your crunch point with 3 items — 4 exams keep the stakes real, with a standard 15-credit load.",
+    scoreReasons: [
+      "4 midterms cluster Oct 8–29 — your busiest stretch",
+      "ACCT Midterm and Financial Statement Analysis (20%) fall the same week",
+      "Dec 9–11: ECON, ACCT, and STAT finals on consecutive days",
+      "15 credits — standard load",
+    ],
     courses: [
-      { name: "Linear Algebra",      code: "MATH 301", credits: 3 },
-      { name: "Algorithms",          code: "CS 401",   credits: 3 },
-      { name: "Macroeconomics",      code: "ECON 201", credits: 3 },
-      { name: "Technical Writing",   code: "ENG 220",  credits: 2 },
+      { name: "Macroeconomics",           code: "ECON 2105", credits: 3 },
+      { name: "Organizational Behavior",  code: "MGMT 3100", credits: 3 },
+      { name: "Financial Accounting",     code: "ACCT 2101", credits: 3 },
+      { name: "Business Statistics",      code: "STAT 2000", credits: 3 },
+      { name: "Marketing Principles",     code: "MKTG 3000", credits: 3 },
     ],
     dangerWeeks: [
       {
-        week: "Oct 14 – Oct 18",
+        week: "Oct 13 – Oct 17",
         load: "High",
-        reasons: ["CS 401 algorithm analysis project", "MATH 301 midterm", "ECON essay outline due"],
+        reasons: [
+          "ACCT 2101 Financial Statement Analysis (20%) due Oct 17",
+          "ACCT 2101 Midterm on Oct 15 — same subject, same week",
+          "ECON 2105 Midterm was Oct 8 — recovery time is minimal",
+        ],
+        actions: [
+          "Finish the Financial Statement Analysis by Oct 13 so the two exam days are pure review",
+          "ACCT midterm covers journal entries and T-accounts — do 3 full practice problems before Tuesday",
+        ],
       },
       {
-        week: "Nov 18 – Nov 22",
-        load: "Medium",
-        reasons: ["CS 401 final project milestone", "ECON 201 problem set", "ENG 220 portfolio draft"],
+        week: "Oct 20 – Oct 24",
+        load: "High",
+        reasons: [
+          "STAT 2000 Midterm on Oct 22",
+          "STAT 2000 Descriptive Statistics Lab due Oct 24 — same week",
+          "MGMT 3100 Midterm on Oct 29 — prep starts now",
+        ],
+        actions: [
+          "STAT lab and STAT midterm both land this week — do the lab first, it reinforces midterm concepts",
+          "Start MGMT 3100 motivation theory notes this weekend — Oct 29 exam comes fast",
+        ],
       },
       {
-        week: "Dec 9 – Dec 13",
-        load: "High",
-        reasons: ["Final exams week", "MATH 301 final", "CS 401 final project demo"],
+        week: "Dec 8 – Dec 12",
+        load: "Critical",
+        reasons: [
+          "ECON 2105 Final on Dec 9 — monetary policy and trade included",
+          "ACCT 2101 Final on Dec 10 — most comprehensive exam of the semester",
+          "STAT 2000 Final on Dec 11 — hypothesis testing and regression",
+        ],
+        actions: [
+          "Three finals in three days — build one-page review sheets for each subject before Dec 1",
+          "ACCT final is the hardest; give it two full study sessions in the final week",
+        ],
       },
     ],
     assignments: [
-      { course: "CS 401",   title: "Sorting Algorithm Analysis",  due: "Oct 16", risk: "medium", weight: "12%" },
-      { course: "MATH 301", title: "Eigenvalue Problem Set",      due: "Oct 18", risk: "medium", weight: "8%"  },
-      { course: "ECON 201", title: "Market Analysis Essay",       due: "Oct 25", risk: "low",    weight: "15%" },
-      { course: "ENG 220",  title: "Technical Report Draft",      due: "Nov 1",  risk: "low",    weight: "20%" },
-      { course: "CS 401",   title: "Graph Traversal Project",     due: "Nov 20", risk: "medium", weight: "18%" },
+      { course: "ECON 2105", title: "Demand & Elasticity Case Study",    due: "Sep 26", risk: "low",    weight: "10%" },
+      { course: "MGMT 3100", title: "Team Dynamics Reflection Paper",    due: "Oct 3",  risk: "low",    weight: "12%" },
+      { course: "ACCT 2101", title: "Financial Statement Analysis",      due: "Oct 17", risk: "high",   weight: "20%" },
+      { course: "STAT 2000", title: "Descriptive Statistics Lab",        due: "Oct 24", risk: "low",    weight: "8%"  },
+      { course: "MKTG 3000", title: "Brand Audit Presentation",          due: "Nov 7",  risk: "medium", weight: "18%" },
+      { course: "MGMT 3100", title: "Leadership Case Study",             due: "Nov 14", risk: "medium", weight: "15%" },
+      { course: "STAT 2000", title: "Regression Analysis Project",       due: "Nov 21", risk: "medium", weight: "20%" },
+      { course: "ECON 2105", title: "Monetary Policy Analysis Paper",    due: "Dec 5",  risk: "medium", weight: "20%" },
     ],
     exams: [
-      { course: "MATH 301", title: "Midterm",       date: "Oct 17", prep: "5 days", risk: "medium", topics: "Eigenvalues, Matrix decomposition"  },
-      { course: "CS 401",   title: "Midterm",       date: "Oct 22", prep: "4 days", risk: "medium", topics: "Complexity, Dynamic programming"    },
-      { course: "ECON 201", title: "Unit 2 Exam",   date: "Nov 5",  prep: "7 days", risk: "low",    topics: "GDP, Inflation, Monetary policy"    },
-      { course: "MATH 301", title: "Final",         date: "Dec 11", prep: "7 days", risk: "medium", topics: "Full semester review"               },
+      { course: "ECON 2105", title: "Midterm",      date: "Oct 8",  prep: "4 days", risk: "medium", topics: "Supply & demand, elasticity, consumer theory"           },
+      { course: "ACCT 2101", title: "Midterm",      date: "Oct 15", prep: "4 days", risk: "high",   topics: "Journal entries, T-accounts, income statements"         },
+      { course: "STAT 2000", title: "Midterm",      date: "Oct 22", prep: "4 days", risk: "medium", topics: "Probability, normal distributions, sampling distributions"},
+      { course: "MGMT 3100", title: "Midterm",      date: "Oct 29", prep: "5 days", risk: "low",    topics: "Motivation theories, group dynamics, leadership styles"  },
+      { course: "ECON 2105", title: "Final",        date: "Dec 9",  prep: "6 days", risk: "medium", topics: "Monetary & fiscal policy, international trade"           },
+      { course: "ACCT 2101", title: "Final",        date: "Dec 10", prep: "7 days", risk: "high",   topics: "Adjusting entries, financial ratios, full semester review"},
+      { course: "STAT 2000", title: "Final",        date: "Dec 11", prep: "5 days", risk: "medium", topics: "Hypothesis testing, regression analysis, ANOVA"          },
     ],
     actions: [
-      { priority: 1, label: "Begin sorting analysis writeup — mid complexity section first",  tag: "Start now"   },
-      { priority: 2, label: "Review eigenvalue proofs before MATH 301 midterm Oct 17",        tag: "Study block" },
-      { priority: 3, label: "Draft ECON essay thesis this weekend",                           tag: "Get ahead"   },
-      { priority: 4, label: "Schedule CS 401 office hours for dynamic programming gaps",      tag: "Support"     },
+      { priority: 1, label: "ACCT Financial Statement Analysis (20%) is due the same week as ACCT Midterm — finish the paper by Oct 13 so exam prep is uninterrupted",     tag: "Finish early" },
+      { priority: 2, label: "4 midterms across Oct 8–29 — don't cram all four; dedicate a 2-hour block per exam starting this weekend",                                    tag: "Study plan"   },
+      { priority: 3, label: "MKTG Brand Audit (18%) is due Nov 7 — pick your brand and start data collection 2 weeks early before midterm recovery eats your time",       tag: "Get ahead"    },
+      { priority: 4, label: "STAT Regression Project (20%) and MGMT Case Study both land Nov 14–21 — get the STAT data cleaned before the MGMT case demands your focus",  tag: "Front-load"   },
+      { priority: 5, label: "Dec 9–11: ECON, ACCT, and STAT finals back-to-back — one-page review sheets per subject, ready before Dec 1",                                tag: "Study plan"   },
     ],
   },
+
+  // ── Scenario 3: Light Semester ────────────────────────────────────────────
+  // Summer 2026 · 9 credits · Humanities electives
+  // Key pattern: mostly smooth with one real crunch — finals week (Aug 4–6)
   {
-    id: "light-load",
-    label: "Light Load",
-    semester: "Summer 2025",
-    riskScore: 18,
+    id: "light-semester",
+    label: "Light Semester",
+    semester: "Summer 2026",
+    riskScore: 22,
     riskLabel: "Low",
-    riskNote: "Low stress semester. Good time to get ahead or explore electives.",
-    scoreReasons: ["No finals or midterms — only quizzes and oral exams", "9 credits is a light summer load", "Assignments are spread out with no heavy clusters"],
+    riskNote: "Spread out well — Jun 9 – Jun 13 is your busiest stretch at 2 items, and with only 5 exams you have room to breathe, softened by a lighter 9-credit load.",
+    scoreReasons: [
+      "9 credits — lighter than a typical semester",
+      "Only 1 truly heavy week: finals (Aug 4–6)",
+      "Assignments are evenly spaced with no collision windows",
+      "HIST Civil Rights Paper (30%) is the single highest-stakes item",
+    ],
     courses: [
-      { name: "Art History",         code: "ART 101",  credits: 3 },
-      { name: "Intro to Sociology",  code: "SOC 110",  credits: 3 },
-      { name: "Spanish II",          code: "SPAN 102", credits: 3 },
+      { name: "US History Since 1865",   code: "HIST 2112", credits: 3 },
+      { name: "American Literature",     code: "ENGL 2130", credits: 3 },
+      { name: "Introduction to Sociology", code: "SOCY 1101", credits: 3 },
     ],
     dangerWeeks: [
       {
-        week: "Jun 16 – Jun 20",
+        week: "Jun 9 – Jun 13",
         load: "Medium",
-        reasons: ["ART 101 museum essay due", "SPAN 102 oral exam", "SOC reading response"],
+        reasons: [
+          "HIST 2112 Midterm on Jun 9 — covers Reconstruction through WWI",
+          "ENGL 2130 Close Reading Analysis due Jun 12 — 3 days after the midterm",
+        ],
+        actions: [
+          "Close Reading is due Jun 12 — draft the thesis before the HIST midterm so you only need to expand it afterward",
+          "HIST Midterm: focus on the Gilded Age and Progressive Era — these appear on almost every section exam",
+        ],
       },
       {
         week: "Jul 14 – Jul 18",
         load: "Medium",
-        reasons: ["Final exams begin", "SOC 110 final paper", "ART 101 presentation"],
+        reasons: [
+          "HIST 2112 Civil Rights Research Paper (30%) due Jul 17",
+          "No other major deadlines — but this is 30% of the course grade",
+        ],
+        actions: [
+          "Civil Rights Paper (30%) — have your argument and 3 sources locked in by Jul 7 so Jul 14 is drafting, not researching",
+        ],
       },
       {
-        week: "Jul 21 – Jul 25",
+        week: "Aug 3 – Aug 7",
         load: "High",
-        reasons: ["SPAN 102 comprehensive final", "SOC 110 group project due"],
+        reasons: [
+          "ENGL 2130 Final on Aug 4 — Fitzgerald, Hemingway, Morrison",
+          "HIST 2112 Final on Aug 5 — WWII through present day",
+          "SOCY 1101 Final on Aug 6 — research methods and social institutions",
+        ],
+        actions: [
+          "Three finals in three days — this is the only real crunch all summer; start subject reviews Jul 28",
+          "ENGL Final covers close reading: re-read your Close Reading Analysis for technique before Aug 4",
+        ],
       },
     ],
     assignments: [
-      { course: "ART 101",  title: "Renaissance Comparison Essay", due: "Jun 18", risk: "low",    weight: "20%" },
-      { course: "SOC 110",  title: "Reading Response #4",          due: "Jun 20", risk: "low",    weight: "10%" },
-      { course: "SPAN 102", title: "Conversational Dialogue",      due: "Jun 25", risk: "low",    weight: "15%" },
-      { course: "SOC 110",  title: "Final Research Paper",         due: "Jul 16", risk: "medium", weight: "35%" },
+      { course: "HIST 2112", title: "Reconstruction Era Response Paper",  due: "Jun 5",  risk: "low",    weight: "15%" },
+      { course: "ENGL 2130", title: "Close Reading: The Great Gatsby",    due: "Jun 12", risk: "low",    weight: "15%" },
+      { course: "SOCY 1101", title: "Field Observation Report",           due: "Jun 26", risk: "low",    weight: "20%" },
+      { course: "HIST 2112", title: "Civil Rights Movement Research Paper", due: "Jul 17", risk: "medium", weight: "30%" },
+      { course: "ENGL 2130", title: "Comparative Essay: Modernism",       due: "Jul 24", risk: "medium", weight: "25%" },
     ],
     exams: [
-      { course: "SPAN 102", title: "Oral Exam",     date: "Jun 19", prep: "3 days", risk: "low",    topics: "Present tense, Vocabulary units 4–6"   },
-      { course: "ART 101",  title: "Final",         date: "Jul 15", prep: "5 days", risk: "low",    topics: "Modern to Contemporary art movements"  },
-      { course: "SOC 110",  title: "Final",         date: "Jul 17", prep: "5 days", risk: "medium", topics: "Social theory, Institutions, Culture"   },
-      { course: "SPAN 102", title: "Written Final", date: "Jul 22", prep: "7 days", risk: "low",    topics: "Grammar, Reading comprehension"         },
+      { course: "HIST 2112", title: "Midterm",      date: "Jun 9",  prep: "3 days", risk: "low",    topics: "Reconstruction, Gilded Age, Progressivism, WWI"          },
+      { course: "SOCY 1101", title: "Midterm",      date: "Jun 16", prep: "3 days", risk: "low",    topics: "Socialization, stratification, deviance, social control"  },
+      { course: "ENGL 2130", title: "Final",        date: "Aug 4",  prep: "5 days", risk: "low",    topics: "Fitzgerald, Hemingway, Morrison — themes and close reading"},
+      { course: "HIST 2112", title: "Final",        date: "Aug 5",  prep: "5 days", risk: "medium", topics: "WWII, Cold War, Civil Rights, post-1980 America"          },
+      { course: "SOCY 1101", title: "Final",        date: "Aug 6",  prep: "4 days", risk: "low",    topics: "Research methods, social institutions, inequality"        },
     ],
     actions: [
-      { priority: 1, label: "Start SOC final paper outline early — it's 35% of grade",    tag: "High value"  },
-      { priority: 2, label: "Practice SPAN dialogue 15 min daily through Jun 19",          tag: "Consistency" },
-      { priority: 3, label: "Use light workload to get ahead on ART essay research",       tag: "Get ahead"   },
+      { priority: 1, label: "HIST Civil Rights Research Paper is 30% of the grade — lock in your argument and 3 primary sources by Jul 7 so you're only drafting during Jul 14 week", tag: "High value"  },
+      { priority: 2, label: "Three finals Aug 4–6 are the only real crunch all summer — start subject reviews Jul 28 and do one mock essay per course",                               tag: "Study plan"  },
+      { priority: 3, label: "ENGL Comparative Essay (25%) is due Jul 24 — budget 2 drafting sessions the week of Jul 14 while HIST paper ideas are still fresh",                     tag: "Front-load"  },
     ],
   },
 ];
@@ -427,7 +540,7 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 
 export default function DashboardPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
-  const [activeId,  setActiveId]  = useState("high-risk");
+  const [activeId,  setActiveId]  = useState("heavy-load");
   const [editingDate, setEditingDate] = useState<{ idx: number; value: string } | null>(null);
   const [showAddForm,   setShowAddForm]   = useState(false);
   const [newItem,       setNewItem]       = useState({ title: "", due: "", course: "", weight: "" });
