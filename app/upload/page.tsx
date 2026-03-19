@@ -79,6 +79,7 @@ export default function UploadPage() {
 
       const data = await res.json();
       localStorage.setItem("gr:analysis", JSON.stringify(data));
+      localStorage.setItem("gr:analyzed-at", new Date().toISOString());
 
       setStep("done");
       // Hold on "done" briefly so user sees the success state

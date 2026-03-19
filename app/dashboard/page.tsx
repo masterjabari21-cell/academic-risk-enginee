@@ -536,6 +536,187 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
   );
 }
 
+// ── Stats Bar ──────────────────────────────────────────────────────────────
+
+function StatsBar({ scenario }: { scenario: Scenario }) {
+  const totalCredits = scenario.courses.reduce((s, c) => s + c.credits, 0);
+  const highRisk = [
+    ...scenario.assignments.filter((a) => a.risk === "high"),
+    ...scenario.exams.filter((e)  => e.risk === "high"),
+  ].length;
+  const stats = [
+    { label: "Assignments", value: scenario.assignments.length, hot: false },
+    { label: "Exams",       value: scenario.exams.length,       hot: false },
+    { label: "High Risk",   value: highRisk,                    hot: highRisk > 0 },
+    { label: "Credits",     value: totalCredits,                 hot: false },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {stats.map((st) => (
+        <div
+          key={st.label}
+          className={`rounded-2xl border p-4 text-center shadow-sm ${
+            st.hot
+              ? "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/15"
+              : "border-red-100 bg-white dark:border-slate-700 dark:bg-slate-800/70"
+          }`}
+        >
+          <p className="text-2xl font-bold text-red-900 dark:text-white">{st.value}</p>
+          <p className={`mt-0.5 text-xs ${st.hot ? "text-red-500 dark:text-red-400" : "text-red-400/70 dark:text-slate-500"}`}>
+            {st.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Semester Timeline ──────────────────────────────────────────────────────
+
+function SemesterTimeline({ scenario }: { scenario: Scenario }) {
+  const items: { label: string; date: Date; kind: "assignment" | "exam"; risk: RiskLevel }[] = [];
+
+  for (const a of scenario.assignments) {
+    const d = parseDate(a.due);
+    if (d) items.push({ label: a.title, date: d, kind: "assignment", risk: a.risk });
+  }
+  for (const e of scenario.exams) {
+    const d = parseDate(e.date);
+    if (d) items.push({ label: `${e.course} ${e.title}`, date: d, kind: "exam", risk: e.risk });
+  }
+
+  if (items.length === 0) return null;
+
+  const timestamps = items.map((i) => i.date.getTime());
+  const minTs = Math.min(...timestamps);
+  const maxTs = Math.max(...timestamps);
+  const pad   = Math.max((maxTs - minTs) * 0.04, 86400000 * 5);
+  const startTs   = minTs - pad;
+  const endTs     = maxTs + pad;
+  const totalSpan = endTs - startTs;
+
+  function pct(ts: number) {
+    return ((ts - startTs) / totalSpan) * 100;
+  }
+
+  // Month markers
+  const monthLabels: { label: string; left: number }[] = [];
+  const cursor = new Date(startTs);
+  cursor.setDate(1);
+  while (cursor.getTime() <= endTs) {
+    const p = pct(cursor.getTime());
+    if (p >= 0 && p <= 100)
+      monthLabels.push({ label: cursor.toLocaleString("default", { month: "short" }), left: p });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  // Danger week bands
+  const bands: { startPct: number; endPct: number; load: WeekLoad }[] = [];
+  for (const w of scenario.dangerWeeks) {
+    const parts = w.week.split("–").map((p) => p.trim());
+    if (parts.length === 2) {
+      const s = parseDate(parts[0]);
+      const e = parseDate(parts[1]);
+      if (s && e) {
+        bands.push({
+          startPct: Math.max(0, pct(s.getTime())),
+          endPct:   Math.min(100, pct(e.getTime())),
+          load:     w.load,
+        });
+      }
+    }
+  }
+
+  const BAND_BG: Record<WeekLoad, string> = {
+    Critical: "bg-red-100/80 dark:bg-red-900/20",
+    High:     "bg-amber-100/80 dark:bg-amber-900/20",
+    Medium:   "bg-blue-100/80 dark:bg-blue-900/20",
+  };
+
+  const DOT_COLOR: Record<RiskLevel, string> = {
+    high:   "bg-red-500   border-red-600",
+    medium: "bg-amber-400 border-amber-500",
+    low:    "bg-green-400 border-green-500",
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-red-500 dark:text-indigo-400">
+        Semester Timeline
+      </p>
+
+      {/* Track */}
+      <div className="relative h-14 w-full select-none">
+        {/* Danger week bands */}
+        {bands.map((b, i) => (
+          <div
+            key={i}
+            className={`absolute top-0 h-full ${BAND_BG[b.load]}`}
+            style={{ left: `${b.startPct}%`, width: `${b.endPct - b.startPct}%` }}
+          />
+        ))}
+
+        {/* Baseline */}
+        <div className="absolute top-1/2 h-px w-full bg-red-100 dark:bg-slate-700" />
+
+        {/* Dots */}
+        {items.map((item, i) => {
+          const x    = pct(item.date.getTime());
+          const isEx = item.kind === "exam";
+          const size = isEx ? 12 : 10;
+          return (
+            <div
+              key={i}
+              title={`${item.label}\n${item.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+              className={`absolute border transition-transform hover:scale-[1.5] hover:z-10 ${DOT_COLOR[item.risk]} ${
+                isEx ? "rounded-sm rotate-45" : "rounded-full"
+              }`}
+              style={{
+                width:  size,
+                height: size,
+                left:  `calc(${x}% - ${size / 2}px)`,
+                top:   `calc(50% - ${size / 2}px)`,
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Month labels */}
+      <div className="relative mt-1.5 h-4">
+        {monthLabels.map((m) => (
+          <span
+            key={`${m.label}-${m.left}`}
+            className="absolute -translate-x-1/2 text-[10px] text-red-300 dark:text-slate-600"
+            style={{ left: `${m.left}%` }}
+          >
+            {m.label}
+          </span>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-red-400/70 dark:text-slate-500">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> High risk
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" /> Medium risk
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-400" /> Low risk
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rotate-45 rounded-sm bg-slate-400 dark:bg-slate-500" /> Exam
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600" /> Assignment
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -546,12 +727,35 @@ export default function DashboardPage() {
   const [newItem,       setNewItem]       = useState({ title: "", due: "", course: "", weight: "" });
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourse,     setNewCourse]     = useState({ name: "", code: "", credits: "" });
+  const [lastAnalyzed,  setLastAnalyzed]  = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("gr:analysis");
       if (!raw) return;
       const real = rawToScenario(JSON.parse(raw) as RawAnalysis);
+
+      // Track when this analysis was last run
+      const analyzedAt = localStorage.getItem("gr:analyzed-at");
+      if (analyzedAt) {
+        const d = new Date(analyzedAt);
+        setLastAnalyzed(
+          d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+          " at " +
+          d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+        );
+      }
+
+      // Append to risk history (dedup by score to avoid re-saving on every mount)
+      try {
+        const history: { date: string; score: number; label: string }[] =
+          JSON.parse(localStorage.getItem("gr:risk-history") || "[]");
+        const last = history[history.length - 1];
+        if (!last || last.score !== real.riskScore || last.date !== analyzedAt) {
+          history.push({ date: analyzedAt ?? new Date().toISOString(), score: real.riskScore, label: real.riskLabel });
+          localStorage.setItem("gr:risk-history", JSON.stringify(history.slice(-20)));
+        }
+      } catch { /* ignore */ }
 
       // Restore saved date edits
       const dateEdits: Record<string, Record<string, string>> =
@@ -726,9 +930,16 @@ export default function DashboardPage() {
 
         {/* Page meta row */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-red-500 dark:text-indigo-400">
-            {s.semester} · Risk Dashboard
-          </p>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-red-500 dark:text-indigo-400">
+              {s.semester} · Risk Dashboard
+            </p>
+            {activeId === "your-analysis" && lastAnalyzed && (
+              <p className="mt-0.5 text-[11px] text-red-400/60 dark:text-slate-600">
+                Last analyzed: {lastAnalyzed}
+              </p>
+            )}
+          </div>
           <Link
             href="/upload"
             className="text-xs font-medium text-red-400 underline underline-offset-2 hover:text-red-600 dark:text-slate-500 dark:hover:text-indigo-400"
@@ -990,6 +1201,12 @@ export default function DashboardPage() {
               );
             })}
           </div>
+        </section>
+
+        {/* ── Semester stats + Timeline ── */}
+        <section className="mt-8 space-y-4">
+          <StatsBar scenario={s} />
+          <SemesterTimeline scenario={s} />
         </section>
 
         {/* ── Assignments + Exams ── */}
