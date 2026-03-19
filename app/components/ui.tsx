@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ButtonHTMLAttributes, ReactNode, useState } from "react";
+import { ButtonHTMLAttributes, ReactNode, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 type ButtonVariant = "primary" | "ghost";
 
@@ -106,46 +107,28 @@ const NAV_LINKS = [
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
   function isActive(href: string) {
     return href === "/" ? pathname === "/" : pathname.startsWith(href);
   }
 
-  return (
+  const overlay = (
     <>
-      <header className="sticky top-0 z-20 border-b border-red-100 bg-[#fdf4e7]/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-          <Link href="/" className="text-base font-bold tracking-tight text-red-900 dark:text-white">
-            Foresite
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Open menu"
-            className="group flex h-10 w-10 items-center justify-center rounded-2xl border border-red-100 bg-white shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-          >
-            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="1" width="14" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
-              <rect x="4" y="6" width="10" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
-              <rect x="6" y="11" width="6" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
       {/* Blurred backdrop */}
       <div
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 z-30 bg-black/25 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[9998] bg-black/25 backdrop-blur-sm transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       />
 
       {/* Slide-in drawer */}
       <div
-        className={`fixed top-0 right-0 z-40 flex h-screen w-72 flex-col shadow-2xl transition-transform duration-300 ease-in-out
+        className={`fixed top-0 right-0 z-[9999] flex h-screen w-72 flex-col shadow-2xl transition-transform duration-300 ease-in-out
           bg-gradient-to-b from-[#fff8f0] to-[#fdf4e7]
           dark:bg-none dark:bg-slate-900
           ${open ? "translate-x-0" : "translate-x-full"}`}
@@ -207,6 +190,33 @@ export function SiteHeader() {
           </div>
         </div>
       </div>
+    </>
+  );
+
+  return (
+    <>
+      <header className="sticky top-0 z-20 border-b border-red-100 bg-[#fdf4e7]/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+          <Link href="/" className="text-base font-bold tracking-tight text-red-900 dark:text-white">
+            Foresite
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="group flex h-10 w-10 items-center justify-center rounded-2xl border border-red-100 bg-white shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+          >
+            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="1" width="14" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
+              <rect x="4" y="6" width="10" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
+              <rect x="6" y="11" width="6" height="2" rx="1" className="fill-red-900 transition-colors group-hover:fill-red-600 dark:fill-slate-100 dark:group-hover:fill-purple-400" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      {mounted && createPortal(overlay, document.body)}
     </>
   );
 }
