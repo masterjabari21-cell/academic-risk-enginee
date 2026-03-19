@@ -337,18 +337,91 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 export default function DashboardPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
   const [activeId,  setActiveId]  = useState("high-risk");
+  const [editingDate, setEditingDate] = useState<{ idx: number; value: string } | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newItem, setNewItem] = useState({ title: "", due: "", course: "", weight: "" });
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("gr:analysis");
       if (!raw) return;
       const real = rawToScenario(JSON.parse(raw) as RawAnalysis);
+
+      // Restore saved date edits
+      const dateEdits: Record<string, Record<string, string>> =
+        JSON.parse(localStorage.getItem("gr:date-edits") || "{}");
+      if (dateEdits["your-analysis"]) {
+        real.assignments = real.assignments.map((a) => ({
+          ...a,
+          due: dateEdits["your-analysis"][a.title] ?? a.due,
+        }));
+      }
+
+      // Restore manually added assignments
+      const manuals: Record<string, typeof real.assignments> =
+        JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
+      if (manuals["your-analysis"]?.length) {
+        real.assignments = [...real.assignments, ...manuals["your-analysis"]];
+      }
+
       setScenarios([real, ...SCENARIOS]);
       setActiveId("your-analysis");
     } catch {
       // corrupt data — fall back to mock scenarios silently
     }
   }, []);
+
+  // Reset edit state when switching tabs
+  useEffect(() => {
+    setEditingDate(null);
+    setShowAddForm(false);
+    setNewItem({ title: "", due: "", course: "", weight: "" });
+  }, [activeId]);
+
+  function saveDate(idx: number, value: string) {
+    const trimmed = value.trim() || "TBD";
+    const title = s.assignments[idx].title;
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        const assignments = sc.assignments.map((a, i) =>
+          i === idx ? { ...a, due: trimmed } : a
+        );
+        return { ...sc, assignments };
+      })
+    );
+    try {
+      const stored: Record<string, Record<string, string>> =
+        JSON.parse(localStorage.getItem("gr:date-edits") || "{}");
+      stored[activeId] = { ...(stored[activeId] ?? {}), [title]: trimmed };
+      localStorage.setItem("gr:date-edits", JSON.stringify(stored));
+    } catch { /* ignore */ }
+    setEditingDate(null);
+  }
+
+  function addAssignment() {
+    if (!newItem.title.trim()) return;
+    const assignment: Scenario["assignments"][number] = {
+      course:  newItem.course.trim()  || "Your course",
+      title:   newItem.title.trim(),
+      due:     newItem.due.trim()     || "TBD",
+      risk:    "medium",
+      weight:  newItem.weight.trim()  || "—",
+    };
+    setScenarios((prev) =>
+      prev.map((sc) =>
+        sc.id !== activeId ? sc : { ...sc, assignments: [...sc.assignments, assignment] }
+      )
+    );
+    try {
+      const stored: Record<string, typeof assignment[]> =
+        JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
+      stored[activeId] = [...(stored[activeId] ?? []), assignment];
+      localStorage.setItem("gr:manual-assignments", JSON.stringify(stored));
+    } catch { /* ignore */ }
+    setNewItem({ title: "", due: "", course: "", weight: "" });
+    setShowAddForm(false);
+  }
 
   const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
 
@@ -491,18 +564,93 @@ export default function DashboardPage() {
             <SectionHeading>Upcoming assignments</SectionHeading>
             <Panel>
               <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
-                {s.assignments.map((a) => (
-                  <li key={a.title} className="flex items-start justify-between gap-4 px-5 py-3.5">
+                {s.assignments.map((a, i) => (
+                  <li key={`${a.title}-${i}`} className="flex items-start justify-between gap-4 px-5 py-3.5">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">{a.title}</p>
                       <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">
-                        {a.course} · Due {a.due} · {a.weight}
+                        {a.course} · Due{" "}
+                        {editingDate?.idx === i ? (
+                          <input
+                            autoFocus
+                            className="w-24 rounded border border-red-300 bg-white px-1 py-0.5 text-xs text-red-900 focus:outline-none dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100"
+                            value={editingDate.value}
+                            onChange={(e) => setEditingDate({ idx: i, value: e.target.value })}
+                            onBlur={() => saveDate(i, editingDate.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveDate(i, editingDate.value);
+                              if (e.key === "Escape") setEditingDate(null);
+                            }}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEditingDate({ idx: i, value: a.due })}
+                            title="Click to edit date"
+                            className={`underline underline-offset-2 decoration-dashed transition hover:text-red-600 dark:hover:text-indigo-400 ${
+                              a.due === "TBD" ? "text-amber-500 dark:text-amber-400" : ""
+                            }`}
+                          >
+                            {a.due}
+                          </button>
+                        )}
+                        {" "}· {a.weight}
                       </p>
                     </div>
                     <RiskBadge level={a.risk} />
                   </li>
                 ))}
               </ul>
+
+              {/* Add assignment form / button */}
+              {showAddForm ? (
+                <div className="border-t border-red-50 px-5 py-4 dark:border-slate-700/60">
+                  <p className="mb-3 text-xs font-semibold text-red-500 dark:text-slate-400">New assignment</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { key: "title",  placeholder: "Title *",                   cls: "sm:col-span-2" },
+                      { key: "due",    placeholder: "Due date (e.g. Apr 5) or leave blank for TBD" },
+                      { key: "course", placeholder: "Course (optional)" },
+                      { key: "weight", placeholder: "Weight (e.g. 10%)" },
+                    ].map(({ key, placeholder, cls }) => (
+                      <input
+                        key={key}
+                        placeholder={placeholder}
+                        value={newItem[key as keyof typeof newItem]}
+                        onChange={(e) => setNewItem((p) => ({ ...p, [key]: e.target.value }))}
+                        className={`rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-indigo-500 ${cls ?? ""}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={addAssignment}
+                      disabled={!newItem.title.trim()}
+                      className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-40 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddForm(false); setNewItem({ title: "", due: "", course: "", weight: "" }); }}
+                      className="rounded-lg bg-red-50 px-4 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-t border-red-50 px-5 py-3 dark:border-slate-700/60">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-red-400 transition hover:text-red-600 dark:text-slate-500 dark:hover:text-slate-300"
+                  >
+                    <span className="text-base leading-none">+</span> Add assignment
+                  </button>
+                </div>
+              )}
             </Panel>
           </section>
 
