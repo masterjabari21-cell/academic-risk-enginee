@@ -150,7 +150,7 @@ export function SiteHeader() {
 
       {/* Slide-in drawer */}
       <div
-        className={`fixed top-0 right-0 z-40 flex h-full w-72 flex-col shadow-2xl transition-transform duration-300 ease-in-out
+        className={`fixed top-0 right-0 z-40 flex h-screen w-72 flex-col shadow-2xl transition-transform duration-300 ease-in-out
           bg-gradient-to-b from-[#fff8f0] to-[#fdf4e7]
           dark:bg-none dark:bg-slate-900
           ${open ? "translate-x-0" : "translate-x-full"}`}
@@ -177,7 +177,7 @@ export function SiteHeader() {
         <div className="mx-6 h-px bg-gradient-to-r from-red-200 via-red-100 to-transparent dark:from-slate-700 dark:via-slate-800 dark:to-transparent" />
 
         {/* Nav links */}
-        <nav className="flex flex-col gap-1 p-4 pt-5">
+        <nav className="flex flex-col gap-1 overflow-y-auto p-4 pt-5">
           {NAV_LINKS.map(({ href, label, icon }, i) => {
             const active = isActive(href);
             return (
