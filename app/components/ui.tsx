@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ButtonHTMLAttributes, ReactNode } from "react";
+import { ButtonHTMLAttributes, ReactNode, useState, useEffect, useRef } from "react";
 
 type ButtonVariant = "primary" | "ghost";
 
@@ -68,10 +68,24 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
 
   function isActive(href: string) {
     return href === "/" ? pathname === "/" : pathname.startsWith(href);
   }
+
+  const activeLabel = NAV_LINKS.find(({ href }) => isActive(href))?.label ?? "Menu";
 
   return (
     <header className="sticky top-0 z-20 border-b border-red-100 bg-[#fdf4e7]/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
@@ -79,21 +93,39 @@ export function SiteHeader() {
         <Link href="/" className="text-base font-bold tracking-tight text-red-900 dark:text-white">
           GradeRadar
         </Link>
-        <nav className="flex items-center gap-0.5 text-sm">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
-                isActive(href)
-                  ? "bg-red-100 text-red-900 dark:bg-slate-800 dark:text-white"
-                  : "text-red-700/70 hover:bg-red-50 hover:text-red-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+
+        {/* Nav dropdown */}
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-2 rounded-full border border-red-200 bg-white px-4 py-1.5 text-sm font-semibold text-red-900 shadow-sm transition hover:bg-red-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+          >
+            {activeLabel}
+            <svg className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M2 4l4 4 4-4" />
+            </svg>
+          </button>
+
+          {open && (
+            <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-red-100 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+              {NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center px-4 py-2.5 text-sm font-medium transition-colors ${
+                    isActive(href)
+                      ? "bg-red-50 text-red-900 dark:bg-slate-700 dark:text-white"
+                      : "text-red-700/80 hover:bg-red-50 hover:text-red-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

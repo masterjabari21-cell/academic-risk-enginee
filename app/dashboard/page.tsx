@@ -649,8 +649,8 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── Risk score + courses ── */}
-        <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+        {/* ── Risk score + courses + recommended actions ── */}
+        <div className="grid gap-4 lg:grid-cols-[240px_1fr_260px]">
 
           {/* Risk score */}
           <Panel className="flex flex-col items-center justify-center gap-4 p-6 text-center">
@@ -799,6 +799,26 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+          </Panel>
+
+          {/* Recommended actions — 3rd column */}
+          <Panel className="flex flex-col p-5">
+            <SectionHeading>Recommended actions</SectionHeading>
+            <ul className="flex flex-col gap-3">
+              {s.actions.map((a) => (
+                <li key={a.priority} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white dark:bg-indigo-600">
+                    {a.priority}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs leading-snug text-red-800 dark:text-slate-200">{a.label}</p>
+                    <span className="mt-1 inline-block rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                      {a.tag}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </Panel>
 
         </div>
@@ -980,25 +1000,6 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* ── Recommended actions ── */}
-        <section className="mt-8">
-          <SectionHeading>Recommended actions</SectionHeading>
-          <Panel>
-            <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
-              {s.actions.map((a) => (
-                <li key={a.priority} className="flex items-center gap-4 px-5 py-3.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white dark:bg-indigo-600">
-                    {a.priority}
-                  </span>
-                  <p className="flex-1 text-sm text-red-800 dark:text-slate-200">{a.label}</p>
-                  <span className="hidden shrink-0 rounded-full border border-red-100 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-400 sm:inline-flex">
-                    {a.tag}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        </section>
 
       </main>
     </div>
