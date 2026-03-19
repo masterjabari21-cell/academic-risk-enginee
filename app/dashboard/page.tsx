@@ -582,6 +582,49 @@ export default function DashboardPage() {
     setShowAddCourse(false);
   }
 
+  function removeCourse(idx: number) {
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        const courses = sc.courses.filter((_, i) => i !== idx);
+        const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
+        const creditMult =
+          totalCredits >= 20 ? 1.4 : totalCredits >= 18 ? 1.25 :
+          totalCredits >= 17 ? 1.15 : totalCredits >= 15 ? 1.0 :
+          totalCredits >= 12 ? 0.9 : totalCredits > 0 ? 0.8 : 1.0;
+        const workload = sc.assignments.length + sc.exams.length * 1.5;
+        const riskScore = Math.min(95, Math.max(5, Math.round(workload * 5 * creditMult)));
+        return { ...sc, courses, riskScore };
+      })
+    );
+    try {
+      const stored: Record<string, { name: string; code: string; credits: number }[]> =
+        JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
+      if (stored[activeId]) {
+        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s.courses.length - (stored[activeId]?.length ?? 0)));
+        localStorage.setItem("gr:manual-courses", JSON.stringify(stored));
+      }
+    } catch { /* ignore */ }
+  }
+
+  function removeAssignment(idx: number) {
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        const assignments = sc.assignments.filter((_, i) => i !== idx);
+        return recalcScenario({ ...sc, assignments });
+      })
+    );
+    try {
+      const stored: Record<string, { title: string; due: string; course: string; risk: string; weight: string }[]> =
+        JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
+      if (stored[activeId]) {
+        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s.assignments.length - (stored[activeId]?.length ?? 0)));
+        localStorage.setItem("gr:manual-assignments", JSON.stringify(stored));
+      }
+    } catch { /* ignore */ }
+  }
+
   const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
 
   const scoreDash   = 283;
@@ -672,15 +715,25 @@ export default function DashboardPage() {
               </p>
             ) : (
               <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
-                {s.courses.map((c) => (
-                  <li key={c.code} className="flex items-center justify-between py-2.5">
-                    <div>
+                {s.courses.map((c, i) => (
+                  <li key={`${c.code}-${i}`} className="flex items-center justify-between py-2.5">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-red-900 dark:text-slate-100">{c.name}</p>
                       <p className="text-xs text-red-400 dark:text-slate-500">{c.code}</p>
                     </div>
-                    <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-slate-700 dark:text-slate-300">
-                      {c.credits} cr
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-slate-700 dark:text-slate-300">
+                        {c.credits} cr
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeCourse(i)}
+                        title="Drop course"
+                        className="rounded-full p-1 text-red-200 transition hover:bg-red-100 hover:text-red-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-red-400"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -833,7 +886,17 @@ export default function DashboardPage() {
                         {" "}· {a.weight}
                       </p>
                     </div>
-                    <RiskBadge level={a.risk} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <RiskBadge level={a.risk} />
+                      <button
+                        type="button"
+                        onClick={() => removeAssignment(i)}
+                        title="Mark as done"
+                        className="rounded-full p-1 text-red-200 transition hover:bg-green-100 hover:text-green-600 dark:text-slate-600 dark:hover:bg-green-900/30 dark:hover:text-green-400"
+                      >
+                        ✓
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
