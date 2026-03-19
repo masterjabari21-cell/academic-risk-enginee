@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "../components/ui";
 import { normalizeItems } from "../lib/normalize";
+import { identifyDangerWeeks } from "../lib/danger-weeks";
 
 // ── Transform raw Claude output → Scenario ───────────────────────────────────
 
@@ -82,32 +83,6 @@ function inferAssignmentRisk(
   return score >= 3 ? "high" : score <= 1 ? "low" : "medium";
 }
 
-function rebuildDangerWeeks(
-  assignments: { title: string; due: string }[],
-  exams: { title: string; date: string }[]
-): { week: string; load: "Critical" | "High" | "Medium"; reasons: string[] }[] {
-  const map = new Map<string, string[]>();
-  for (const a of assignments) {
-    const d = parseDate(a.due);
-    if (!d) continue;
-    const key = weekLabel(d);
-    map.set(key, [...(map.get(key) ?? []), a.title]);
-  }
-  for (const e of exams) {
-    const d = parseDate(e.date);
-    if (!d) continue;
-    const key = weekLabel(d);
-    map.set(key, [...(map.get(key) ?? []), `${e.title} (exam)`]);
-  }
-  return [...map.entries()]
-    .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 3)
-    .map(([week, reasons]) => ({
-      week,
-      load: (reasons.length >= 4 ? "Critical" : reasons.length >= 2 ? "High" : "Medium") as "Critical" | "High" | "Medium",
-      reasons,
-    }));
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -267,7 +242,10 @@ function rawToScenario(data: RawAnalysis): Scenario {
   // Deadlines for scoring only (not rendered separately)
   const deadlineItems = allItems.filter((i) => i.type === "deadline");
 
-  const dangerWeeks = rebuildDangerWeeks(assignments, exams);
+  const dangerWeeks = identifyDangerWeeks([
+    ...assignments.map((a) => ({ title: a.title, kind: "assignment" as const, date: a.due, weight: a.weight })),
+    ...exams.map((e) => ({ title: e.title, kind: "exam" as const, date: e.date })),
+  ]);
 
   const { riskScore, scoreReasons } = computeScore(assignments, exams, deadlineItems.map((d) => ({ name: d.title, date: d.dueDate })), totalCredits);
   const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low";
@@ -324,7 +302,7 @@ interface Scenario {
   riskNote: string;
   scoreReasons: string[];
   courses: { name: string; code: string; credits: number }[];
-  dangerWeeks: { week: string; load: WeekLoad; reasons: string[] }[];
+  dangerWeeks: { week: string; load: WeekLoad; reasons: string[]; actions?: string[] }[];
   assignments: { course: string; title: string; due: string; risk: RiskLevel; weight: string }[];
   exams: { course: string; title: string; date: string; prep: string; risk: RiskLevel; topics: string }[];
   actions: { priority: number; label: string; tag: string }[];
@@ -335,7 +313,10 @@ function recalcScenario(sc: Scenario): Scenario {
     ...a,
     risk: inferAssignmentRisk(a.title, a.weight, a.due, sc.assignments, sc.exams) as RiskLevel,
   }));
-  const dangerWeeks = rebuildDangerWeeks(assignments, sc.exams);
+  const dangerWeeks = identifyDangerWeeks([
+    ...assignments.map((a) => ({ title: a.title, kind: "assignment" as const, date: a.due, weight: a.weight })),
+    ...sc.exams.map((e) => ({ title: e.title, kind: "exam" as const, date: e.date })),
+  ]);
   const totalCredits = sc.courses.reduce((s, c) => s + c.credits, 0);
   const { riskScore, scoreReasons } = computeScore(assignments, sc.exams, [], totalCredits);
   const riskLabel = riskScore >= 60 ? "High" : riskScore >= 35 ? "Medium" : "Low" as Scenario["riskLabel"];
@@ -963,6 +944,8 @@ export default function DashboardPage() {
                       {w.load}
                     </span>
                   </div>
+
+                  {/* Why this week is flagged */}
                   <ul className="mt-3 space-y-1.5">
                     {w.reasons.map((r) => (
                       <li key={r} className={`flex items-start gap-2 text-xs ${st.text}`}>
@@ -971,6 +954,18 @@ export default function DashboardPage() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* What to do about it */}
+                  {w.actions && w.actions.length > 0 && (
+                    <ul className="mt-3 space-y-1.5 border-t border-current/10 pt-3">
+                      {w.actions.map((a) => (
+                        <li key={a} className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="mt-0.5 shrink-0 text-green-500">✓</span>
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               );
             })}
