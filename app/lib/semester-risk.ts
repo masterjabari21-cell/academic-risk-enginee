@@ -193,117 +193,177 @@ export function computeSemesterRisk(
 // ── generateRecommendations ───────────────────────────────────────────────────
 
 /**
- * Generates 3–5 specific, pattern-based recommendations.
+ * Generates up to 5 specific, pattern-based recommendations.
  *
- * Patterns detected:
- * - Exam + project collision within 7 days → start project earlier
- * - 3+ items due within 5 days → front-load the lightest task
- * - 2+ adjacent high-intensity weeks → spread prep across both
- * - 3+ exams (esp. finals) → build a study schedule now
- * - High-weight assignment due near an exam → block time early
- * - Calm stretch before first danger week → opportunity to get ahead
+ * Patterns (in priority order):
+ * 1. Imminent high-stakes item due within 7 days → start now
+ * 2. Back-to-back exams within 2 days → split study now
+ * 3. Assignment sandwiched 1–3 days before an exam → finish early
+ * 4. Dense cluster of 3+ items within 5 days → front-load the lightest
+ * 5. Cumulative/final exam detected → review sheet now vs active recall sprint
+ * 6. High-weight item with no due date → find and lock it in
+ * 7. Runway before first danger week → use it on the heaviest upcoming item
+ *
+ * @param today  Injected for testability; defaults to current date.
  */
 export function generateRecommendations(
   items: RiskItem[],
   dangerWeeks: { week: string; load: "Critical" | "High" | "Medium" }[],
+  today: Date = new Date(),
 ): Recommendation[] {
   const recs: Recommendation[] = [];
+  const DAY = 86_400_000;
 
   type Dated = RiskItem & { parsedDate: Date };
-  const dated: Dated[] = items
+
+  // Split into dated (future only) and undated
+  const allDated: Dated[] = items
     .map((i) => ({ ...i, parsedDate: parseDate(i.date)! }))
     .filter((i) => i.parsedDate !== null);
 
-  const exams    = dated.filter((i) => i.kind === "exam");
-  const projects = dated.filter((i) => i.kind === "project");
-  const assigns  = dated.filter((i) => i.kind === "assignment");
+  const undated = items.filter((i) => !parseDate(i.date));
 
-  // ── 1. Exam + project collision ──────────────────────────────────────────
-  for (const exam of exams) {
-    const collision = projects.find(
-      (p) => Math.abs(exam.parsedDate.getTime() - p.parsedDate.getTime()) <= 7 * 86_400_000
-    );
-    if (collision) {
+  // Only future items matter for actionable recs
+  const future = allDated
+    .filter((i) => i.parsedDate >= today)
+    .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
+
+  const exams    = future.filter((i) => i.kind === "exam");
+  const projects = future.filter((i) => i.kind === "project");
+  const assigns  = future.filter((i) => i.kind === "assignment");
+
+  function daysUntil(d: Date) {
+    return Math.ceil((d.getTime() - today.getTime()) / DAY);
+  }
+
+  // ── 1. Imminent high-stakes item (due within 7 days) ──────────────────────
+  const imminent = future
+    .filter((i) => {
+      const d = daysUntil(i.parsedDate);
+      return d >= 0 && d <= 7 && (
+        i.kind === "exam" || i.kind === "project" || weightPct(i.weight) >= 15
+      );
+    })
+    .sort((a, b) => {
+      const diff = a.parsedDate.getTime() - b.parsedDate.getTime();
+      return diff !== 0 ? diff : KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind];
+    });
+
+  if (imminent.length > 0) {
+    const top  = imminent[0];
+    const days = daysUntil(top.parsedDate);
+    const when = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
+    recs.push({
+      label: `"${top.title}" is due ${when} — make this your only focus until it's done`,
+      tag: "Urgent",
+    });
+  }
+
+  // ── 2. Back-to-back exams (within 2 days of each other) ───────────────────
+  for (let i = 0; i < exams.length - 1; i++) {
+    const a = exams[i], b = exams[i + 1];
+    const gap = (b.parsedDate.getTime() - a.parsedDate.getTime()) / DAY;
+    if (gap <= 2) {
+      const gapStr = gap <= 1 ? "back-to-back" : "2 days apart";
       recs.push({
-        label: `"${collision.title}" (due ${fmtDate(collision.parsedDate)}) overlaps with your ${exam.title} on ${fmtDate(exam.parsedDate)} — start the project at least a week early so exam prep isn't rushed`,
-        tag: "Schedule conflict",
+        label: `"${a.title}" and "${b.title}" are ${gapStr} — study them as completely separate subjects starting now, not both the night before`,
+        tag: "Back-to-back",
       });
       break;
     }
   }
 
-  // ── 2. 3+ items close together ────────────────────────────────────────────
-  const sorted = [...dated].sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
-  let clusterFound = false;
-  for (let i = 0; i < sorted.length && !clusterFound; i++) {
-    const anchor = sorted[i].parsedDate.getTime();
-    const window = sorted.filter((x) => {
-      const diff = x.parsedDate.getTime() - anchor;
-      return diff >= 0 && diff <= 5 * 86_400_000;
-    });
-    if (window.length >= 3) {
-      clusterFound = true;
-      const startStr = fmtDate(sorted[i].parsedDate);
-      const endDate  = new Date(Math.max(...window.map((x) => x.parsedDate.getTime())));
-      const endStr   = fmtDate(endDate);
-      // Recommend finishing the lightest item first
-      const lightest = [...window].sort((a, b) => KIND_WEIGHT[a.kind] - KIND_WEIGHT[b.kind])[0];
+  // ── 3. Assignment/project sandwiched just before an exam ──────────────────
+  let sandwichFound = false;
+  for (const exam of exams) {
+    if (sandwichFound) break;
+    const before = [...assigns, ...projects]
+      .filter((a) => {
+        const diff = (exam.parsedDate.getTime() - a.parsedDate.getTime()) / DAY;
+        return diff >= 1 && diff <= 3;
+      })
+      .sort((a, b) => b.parsedDate.getTime() - a.parsedDate.getTime());
+
+    if (before.length > 0) {
+      const item = before[0];
+      const days = Math.round((exam.parsedDate.getTime() - item.parsedDate.getTime()) / DAY);
       recs.push({
-        label: `${window.length} items are due between ${startStr}–${endStr} — finish "${lightest.title}" ahead of time to protect space for the heavier ones`,
+        label: `"${item.title}" is due ${days} day${days > 1 ? "s" : ""} before your "${exam.title}" — finish it ${days + 2} days early so exam prep gets your full attention`,
+        tag: "Finish early",
+      });
+      sandwichFound = true;
+    }
+  }
+
+  // ── 4. Dense cluster: 3+ items within 5 days ──────────────────────────────
+  let clusterFound = false;
+  for (let i = 0; i < future.length && !clusterFound; i++) {
+    const anchor  = future[i].parsedDate.getTime();
+    const cluster = future.filter((x) => {
+      const diff = x.parsedDate.getTime() - anchor;
+      return diff >= 0 && diff <= 5 * DAY;
+    });
+    if (cluster.length >= 3) {
+      clusterFound = true;
+      const start    = fmtDate(future[i].parsedDate);
+      const end      = fmtDate(new Date(Math.max(...cluster.map((x) => x.parsedDate.getTime()))));
+      const heaviest = [...cluster].sort((a, b) => KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind])[0];
+      const lightest = [...cluster].sort((a, b) => KIND_WEIGHT[a.kind] - KIND_WEIGHT[b.kind])[0];
+      recs.push({
+        label: `${cluster.length} items due ${start}–${end} — clear "${lightest.title}" before the window opens so you have unbroken time for "${heaviest.title}"`,
         tag: "Front-load",
       });
     }
   }
 
-  // ── 3. Adjacent high-intensity weeks ──────────────────────────────────────
-  const heavy = dangerWeeks.filter((w) => w.load === "Critical" || w.load === "High");
-  if (heavy.length >= 2) {
+  // ── 5. Finals / cumulative exams ──────────────────────────────────────────
+  const finals = exams.filter((e) => /final|comprehensive/i.test(e.title));
+  if (finals.length > 0) {
+    const next     = finals[0];
+    const weeksOut = Math.floor(daysUntil(next.parsedDate) / 7);
+    if (weeksOut >= 2) {
+      recs.push({
+        label: `"${next.title}" is ${weeksOut} week${weeksOut > 1 ? "s" : ""} away — build a one-page review sheet per topic now so nothing is new the night before`,
+        tag: "Study plan",
+      });
+    } else if (weeksOut >= 0) {
+      recs.push({
+        label: `"${next.title}" is under 2 weeks out — switch to active recall: practice problems and timed mock questions, not rereading notes`,
+        tag: "Final sprint",
+      });
+    }
+  } else if (exams.length >= 3 && !recs.find((r) => r.tag === "Study plan")) {
     recs.push({
-      label: `${heavy[0].week} and ${heavy[1].week} are both high-intensity — start prep two weeks out and spread study sessions across both stretches`,
-      tag: "Spread prep",
+      label: `${exams.length} exams on the calendar — tie each study session to a specific topic gap, not a vague "review notes" block`,
+      tag: "Study plan",
     });
   }
 
-  // ── 4. Heavy exam period ──────────────────────────────────────────────────
-  if (exams.length >= 3) {
-    const finals = exams.filter((e) => /final|comprehensive/i.test(e.title));
-    if (finals.length >= 2) {
+  // ── 6. High-weight item with no due date ──────────────────────────────────
+  if (recs.length < 5) {
+    const missing = undated
+      .filter((i) => weightPct(i.weight) >= 15)
+      .sort((a, b) => weightPct(b.weight) - weightPct(a.weight));
+    if (missing.length > 0) {
+      const top = missing[0];
       recs.push({
-        label: `${finals.length} finals are on the calendar — build a study schedule now so cramming isn't your only option`,
-        tag: "Study plan",
-      });
-    } else {
-      recs.push({
-        label: `${exams.length} exams across the semester — 30-minute review sessions 3× a week consistently beat a last-minute cram`,
-        tag: "Study plan",
+        label: `"${top.title}" is worth ${top.weight} but has no due date — find it in the syllabus today and add it to your calendar before it sneaks up`,
+        tag: "Missing date",
       });
     }
   }
 
-  // ── 5. High-weight assignment due near an exam ────────────────────────────
-  if (recs.length < 4) {
-    for (const a of [...assigns, ...projects]) {
-      const w = weightPct(a.weight);
-      if (w < 20) continue;
-      const nearExam = exams.find(
-        (e) => Math.abs(e.parsedDate.getTime() - a.parsedDate.getTime()) <= 5 * 86_400_000
-      );
-      if (nearExam) {
-        recs.push({
-          label: `"${a.title}" (${a.weight}, due ${fmtDate(a.parsedDate)}) falls near an exam — block time for it now before the exam-prep window opens`,
-          tag: "Prioritize",
-        });
-        break;
-      }
+  // ── 7. Runway before first danger week ────────────────────────────────────
+  const criticalWeeks = dangerWeeks.filter((w) => w.load === "Critical" || w.load === "High");
+  if (criticalWeeks.length > 0 && recs.length < 4) {
+    const upcoming = [...assigns, ...projects].filter((a) => daysUntil(a.parsedDate) > 7);
+    if (upcoming.length > 0) {
+      const heaviest = upcoming.sort((a, b) => KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind])[0];
+      recs.push({
+        label: `You have runway before ${criticalWeeks[0].week} — use it to make real progress on "${heaviest.title}" instead of waiting until you're already under pressure`,
+        tag: "Get ahead",
+      });
     }
-  }
-
-  // ── 6. Calm stretch: opportunity to get ahead ────────────────────────────
-  if (dangerWeeks.length > 0 && recs.length < 3) {
-    recs.push({
-      label: `Use lighter weeks before ${dangerWeeks[0].week} to get ahead on reading and draft work — front-loading pays off when the crunch hits`,
-      tag: "Get ahead",
-    });
   }
 
   return recs.slice(0, 5);
