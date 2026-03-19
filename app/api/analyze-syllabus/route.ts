@@ -4,28 +4,32 @@ import { NextRequest, NextResponse } from "next/server";
 const SYSTEM_PROMPT = `You are an academic assistant that extracts structured data from college course syllabuses.
 
 Extract every assignment, exam, project, and important deadline mentioned in the syllabus.
-Be thorough — include all dates you can find.
+Be thorough — include all dates you can find. Handle messy, poorly formatted, or incomplete syllabuses gracefully.
 
 Return ONLY valid JSON in exactly this shape (no markdown, no explanation):
 {
   "assignments": [
-    { "name": "string", "due_date": "string or null", "points": "string or null" }
+    { "name": "string", "due_date": "string", "points": "string or null" }
   ],
   "exams": [
-    { "name": "string", "date": "string or null", "type": "string (Midterm, Final, Quiz, etc.)" }
+    { "name": "string", "date": "string", "type": "string (Midterm, Final, Quiz, etc.)" }
   ],
   "deadlines": [
-    { "name": "string", "date": "string or null" }
+    { "name": "string", "date": "string" }
   ]
 }
 
 Rules:
 - Use the exact date text from the syllabus (e.g. "September 15", "Week 4", "Oct 3")
-- If a date is not mentioned, use null
+- If a date is missing or unclear → use "TBD"
+- If a name is garbled or unclear → make your best guess at a readable title
+- If points/weight is not mentioned → use null
+- If the syllabus is incomplete or poorly formatted → extract whatever you can find, never return empty arrays if there is any relevant content
 - Include projects under "assignments"
 - Include quizzes under "exams"
 - "deadlines" is for anything that doesn't fit the other two (add/drop, withdrawal, reading days, etc.)
-- If a field has no items, return an empty array — never omit a key`;
+- If a field truly has no items, return an empty array — never omit a key
+- Never refuse to return JSON even if the syllabus is messy — always return the best extraction you can`;
 
 export async function POST(req: NextRequest) {
   // 0. Validate API key
@@ -132,9 +136,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    assignments: parsed.assignments ?? [],
-    exams:       parsed.exams       ?? [],
-    deadlines:   parsed.deadlines   ?? [],
-  });
+  // Sanitize — fill in any missing fields Claude may have skipped
+  const assignments = (parsed.assignments ?? []).map((a) => ({
+    name:     a.name     || "Untitled Assignment",
+    due_date: a.due_date || "TBD",
+    points:   a.points   ?? null,
+  }));
+  const exams = (parsed.exams ?? []).map((e) => ({
+    name: e.name || "Untitled Exam",
+    date: e.date || "TBD",
+    type: e.type || "Exam",
+  }));
+  const deadlines = (parsed.deadlines ?? []).map((d) => ({
+    name: d.name || "Untitled Deadline",
+    date: d.date || "TBD",
+  }));
+
+  return NextResponse.json({ assignments, exams, deadlines });
 }
