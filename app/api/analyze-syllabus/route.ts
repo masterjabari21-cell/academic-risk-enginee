@@ -49,23 +49,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const file = formData.get("file");
-  if (!file || !(file instanceof Blob)) {
+  const rawFiles = formData.getAll("file");
+  if (!rawFiles.length) {
     return NextResponse.json(
       { error: "No file provided. Send the PDF under the field name 'file'." },
       { status: 400 }
     );
   }
-  if (file.type !== "application/pdf") {
+  const blobs = rawFiles.filter((f) => f instanceof File && f.type === "application/pdf") as File[];
+  if (!blobs.length) {
     return NextResponse.json(
       { error: "Only PDF files are accepted." },
       { status: 415 }
     );
   }
 
-  // 2. Convert PDF to base64 and send directly to Claude
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const base64 = buffer.toString("base64");
+  // 2. Convert all PDFs to base64 and send directly to Claude
+  const docBlocks = await Promise.all(
+    blobs.map(async (blob) => {
+      const buf = Buffer.from(await blob.arrayBuffer());
+      return {
+        type: "document" as const,
+        source: { type: "base64" as const, media_type: "application/pdf" as const, data: buf.toString("base64") },
+      };
+    })
+  );
 
   let rawJson: string;
   try {
@@ -77,17 +85,12 @@ export async function POST(req: NextRequest) {
         {
           role: "user",
           content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64,
-              },
-            } as Anthropic.DocumentBlockParam,
+            ...docBlocks,
             {
               type: "text",
-              text: "Extract all assignments, exams, and deadlines from this syllabus.",
+              text: blobs.length > 1
+                ? "Extract all assignments, exams, and deadlines from all of these syllabuses combined."
+                : "Extract all assignments, exams, and deadlines from this syllabus.",
             },
           ],
         },

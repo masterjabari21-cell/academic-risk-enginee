@@ -59,7 +59,7 @@ export default function UploadPage() {
     setErrorMsg(null);
 
     const formData = new FormData();
-    formData.append("file", files[0].raw);
+    files.forEach((f) => formData.append("file", f.raw));
 
     try {
       setStep("uploading");
