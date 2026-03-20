@@ -737,6 +737,8 @@ export default function DashboardPage() {
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourse,     setNewCourse]     = useState({ name: "", code: "", credits: "" });
   const [lastAnalyzed,  setLastAnalyzed]  = useState<string | null>(null);
+  const [simGrades,     setSimGrades]     = useState<Record<string, string>>({});
+  const [completing,    setCompleting]    = useState<number[]>([]);
 
   useEffect(() => {
     try {
@@ -754,6 +756,10 @@ export default function DashboardPage() {
           d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
         );
       }
+
+      // Load GPA Sim grades for the course list
+      const simGradesRaw = localStorage.getItem("gr:sim-grades");
+      if (simGradesRaw) setSimGrades(JSON.parse(simGradesRaw));
 
       // Append to risk history (dedup by score to avoid re-saving on every mount)
       try {
@@ -795,6 +801,14 @@ export default function DashboardPage() {
     } catch {
       // corrupt data — fall back to mock scenarios silently
     }
+  }, []);
+
+  // Load GPA Sim grades on mount (works for both real and demo scenarios)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("gr:sim-grades");
+      if (raw) setSimGrades(JSON.parse(raw));
+    } catch { /* ignore */ }
   }, []);
 
   // Reset edit state when switching tabs
@@ -926,6 +940,14 @@ export default function DashboardPage() {
     } catch { /* ignore */ }
   }
 
+  function markDone(idx: number) {
+    setCompleting((prev) => [...prev, idx]);
+    setTimeout(() => {
+      removeAssignment(idx);
+      setCompleting((prev) => prev.filter((i) => i !== idx));
+    }, 500);
+  }
+
   const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
 
   const scoreDash   = 283;
@@ -1054,6 +1076,11 @@ export default function DashboardPage() {
                       <p className="text-xs text-red-400 dark:text-slate-500">{c.code}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {simGrades[c.code] && (
+                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                          {simGrades[c.code]}
+                        </span>
+                      )}
                       <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-slate-700 dark:text-slate-300">
                         {c.credits} cr
                       </span>
@@ -1233,9 +1260,9 @@ export default function DashboardPage() {
             <Panel>
               <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
                 {s.assignments.map((a, i) => (
-                  <li key={`${a.title}-${i}`} className="flex items-start justify-between gap-4 px-5 py-3.5">
+                  <li key={`${a.title}-${i}`} className={`flex items-start justify-between gap-4 px-5 py-3.5 transition-colors duration-300 ${completing.includes(i) ? "bg-green-50 dark:bg-green-900/10" : ""}`}>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">{a.title}</p>
+                      <p className={`truncate text-sm font-medium text-red-900 dark:text-slate-100 transition-all duration-300 ${completing.includes(i) ? "line-through opacity-50" : ""}`}>{a.title}</p>
                       <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">
                         {a.course} · Due{" "}
                         {editingDate?.idx === i ? (
@@ -1269,9 +1296,10 @@ export default function DashboardPage() {
                       <RiskBadge level={a.risk} />
                       <button
                         type="button"
-                        onClick={() => removeAssignment(i)}
+                        onClick={() => markDone(i)}
                         title="Mark as done"
-                        className="rounded-full p-1 text-red-200 transition hover:bg-green-100 hover:text-green-600 dark:text-slate-600 dark:hover:bg-green-900/30 dark:hover:text-green-400"
+                        disabled={completing.includes(i)}
+                        className={`rounded-full p-1 transition ${completing.includes(i) ? "text-green-500 dark:text-green-400" : "text-red-200 hover:bg-green-100 hover:text-green-600 dark:text-slate-600 dark:hover:bg-green-900/30 dark:hover:text-green-400"}`}
                       >
                         ✓
                       </button>

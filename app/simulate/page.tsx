@@ -154,6 +154,14 @@ export default function SimulatePage() {
     } catch { /* fall back to defaults */ }
   }, []);
 
+  useEffect(() => {
+    try {
+      const grades: Record<string, string> = {};
+      courses.forEach((c) => { if (c.code) grades[c.code] = c.currentGrade; });
+      localStorage.setItem("gr:sim-grades", JSON.stringify(grades));
+    } catch { /* ignore */ }
+  }, [courses]);
+
   const semCredits = courses.reduce((s, c) => s + c.credits, 0);
   const currentGPA = calcGPA(courses, "currentGrade");
   const targetGPA  = calcGPA(courses, "targetGrade");
