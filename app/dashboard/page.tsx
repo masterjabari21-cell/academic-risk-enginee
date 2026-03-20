@@ -733,11 +733,13 @@ export default function DashboardPage() {
     typeof window !== "undefined" && !!localStorage.getItem("gr:analysis")
   );
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
-  const [activeId,  setActiveId]  = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem("gr:analysis")
-      ? "your-analysis"
-      : "heavy-load"
-  );
+  const [activeId,  setActiveId]  = useState(() => {
+    if (typeof window !== "undefined") {
+      if (localStorage.getItem("gr:analysis"))      return "your-analysis";
+      if (localStorage.getItem("gr:demo-analysis")) return "sample-analysis";
+    }
+    return "heavy-load";
+  });
   const [editingDate, setEditingDate] = useState<{ idx: number; value: string } | null>(null);
   const [showAddForm,   setShowAddForm]   = useState(false);
   const [newItem,       setNewItem]       = useState({ title: "", due: "", course: "", weight: "" });
@@ -748,66 +750,85 @@ export default function DashboardPage() {
   const [completing,    setCompleting]    = useState<number[]>([]);
 
   useEffect(() => {
+    const newScenarios: Scenario[] = [];
+
+    // ── Load real analysis ─────────────────────────────────────────────────
     try {
       const raw = localStorage.getItem("gr:analysis");
-      if (!raw) return;
-      const real = rawToScenario(JSON.parse(raw) as RawAnalysis);
+      if (raw) {
+        const real = rawToScenario(JSON.parse(raw) as RawAnalysis);
 
-      // Track when this analysis was last run
-      const analyzedAt = localStorage.getItem("gr:analyzed-at");
-      if (analyzedAt) {
-        const d = new Date(analyzedAt);
-        setLastAnalyzed(
-          d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-          " at " +
-          d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-        );
-      }
-
-      // Load GPA Sim grades for the course list
-      const simGradesRaw = localStorage.getItem("gr:sim-grades");
-      if (simGradesRaw) setSimGrades(JSON.parse(simGradesRaw));
-
-      // Append to risk history (dedup by score to avoid re-saving on every mount)
-      try {
-        const history: { date: string; score: number; label: string }[] =
-          JSON.parse(localStorage.getItem("gr:risk-history") || "[]");
-        const last = history[history.length - 1];
-        if (!last || last.score !== real.riskScore || last.date !== analyzedAt) {
-          history.push({ date: analyzedAt ?? new Date().toISOString(), score: real.riskScore, label: real.riskLabel });
-          localStorage.setItem("gr:risk-history", JSON.stringify(history.slice(-20)));
+        // Track when this analysis was last run
+        const analyzedAt = localStorage.getItem("gr:analyzed-at");
+        if (analyzedAt) {
+          const d = new Date(analyzedAt);
+          setLastAnalyzed(
+            d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+            " at " +
+            d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+          );
         }
-      } catch { /* ignore */ }
 
-      // Restore saved date edits
-      const dateEdits: Record<string, Record<string, string>> =
-        JSON.parse(localStorage.getItem("gr:date-edits") || "{}");
-      if (dateEdits["your-analysis"]) {
-        real.assignments = real.assignments.map((a) => ({
-          ...a,
-          due: dateEdits["your-analysis"][a.title] ?? a.due,
-        }));
+        // Load GPA Sim grades for the course list
+        const simGradesRaw = localStorage.getItem("gr:sim-grades");
+        if (simGradesRaw) setSimGrades(JSON.parse(simGradesRaw));
+
+        // Append to risk history (dedup by score to avoid re-saving on every mount)
+        try {
+          const history: { date: string; score: number; label: string }[] =
+            JSON.parse(localStorage.getItem("gr:risk-history") || "[]");
+          const last = history[history.length - 1];
+          if (!last || last.score !== real.riskScore || last.date !== analyzedAt) {
+            history.push({ date: analyzedAt ?? new Date().toISOString(), score: real.riskScore, label: real.riskLabel });
+            localStorage.setItem("gr:risk-history", JSON.stringify(history.slice(-20)));
+          }
+        } catch { /* ignore */ }
+
+        // Restore saved date edits
+        const dateEdits: Record<string, Record<string, string>> =
+          JSON.parse(localStorage.getItem("gr:date-edits") || "{}");
+        if (dateEdits["your-analysis"]) {
+          real.assignments = real.assignments.map((a) => ({
+            ...a,
+            due: dateEdits["your-analysis"][a.title] ?? a.due,
+          }));
+        }
+
+        // Restore manually added assignments
+        const manuals: Record<string, typeof real.assignments> =
+          JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
+        if (manuals["your-analysis"]?.length) {
+          real.assignments = [...real.assignments, ...manuals["your-analysis"]];
+        }
+
+        // Restore manually added courses
+        const manualCourses: Record<string, typeof real.courses> =
+          JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
+        if (manualCourses["your-analysis"]?.length) {
+          real.courses = [...real.courses, ...manualCourses["your-analysis"]];
+        }
+
+        newScenarios.push(real);
+        setHasUpload(true);
+        setActiveId("your-analysis");
       }
+    } catch { /* corrupt data — skip */ }
 
-      // Restore manually added assignments
-      const manuals: Record<string, typeof real.assignments> =
-        JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
-      if (manuals["your-analysis"]?.length) {
-        real.assignments = [...real.assignments, ...manuals["your-analysis"]];
+    // ── Load demo analysis (separate key — never overwrites real work) ──────
+    try {
+      const demoRaw = localStorage.getItem("gr:demo-analysis");
+      if (demoRaw) {
+        const demo = rawToScenario(JSON.parse(demoRaw) as RawAnalysis);
+        newScenarios.push({ ...demo, id: "sample-analysis", label: "Sample Analysis", semester: "Sample Semester" });
       }
+    } catch { /* corrupt demo data — skip */ }
 
-      // Restore manually added courses
-      const manualCourses: Record<string, typeof real.courses> =
-        JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
-      if (manualCourses["your-analysis"]?.length) {
-        real.courses = [...real.courses, ...manualCourses["your-analysis"]];
+    if (newScenarios.length > 0) {
+      setScenarios(newScenarios);
+      // If no real upload, default to sample-analysis (set during lazy init — just ensure correct)
+      if (!newScenarios.some((sc) => sc.id === "your-analysis")) {
+        setActiveId("sample-analysis");
       }
-
-      setScenarios([real]);
-      setActiveId("your-analysis");
-      setHasUpload(true);
-    } catch {
-      // corrupt data — fall back to mock scenarios silently
     }
   }, []);
 
@@ -986,9 +1007,19 @@ export default function DashboardPage() {
             <span className="text-sm">👀</span>
             <p className="text-xs text-amber-800 dark:text-amber-400">
               You&apos;re viewing <span className="font-semibold">sample data</span> —{" "}
-              <Link href="/upload" className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
-                upload a syllabus
-              </Link>{" "}
+              {hasUpload ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveId("your-analysis")}
+                  className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300"
+                >
+                  switch to Your Analysis
+                </button>
+              ) : (
+                <Link href="/upload" className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
+                  upload a syllabus
+                </Link>
+              )}{" "}
               to see your own risk score.
             </p>
           </div>

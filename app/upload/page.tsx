@@ -47,8 +47,8 @@ const DEMO_ANALYSIS = {
 
 function seedDemo(router: ReturnType<typeof useRouter>) {
   try {
-    localStorage.setItem("gr:analysis",    JSON.stringify(DEMO_ANALYSIS));
-    localStorage.setItem("gr:analyzed-at", new Date().toISOString());
+    // Write to a separate key so real analyses are never overwritten
+    localStorage.setItem("gr:demo-analysis", JSON.stringify(DEMO_ANALYSIS));
   } catch { /* ignore */ }
   router.push("/dashboard");
 }
