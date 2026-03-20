@@ -776,16 +776,18 @@ export default function DashboardPage() {
         const simGradesRaw = localStorage.getItem("gr:sim-grades");
         if (simGradesRaw) setSimGrades(JSON.parse(simGradesRaw));
 
-        // Append to risk history (dedup by score to avoid re-saving on every mount)
-        try {
-          const history: { date: string; score: number; label: string }[] =
-            JSON.parse(localStorage.getItem("gr:risk-history") || "[]");
-          const last = history[history.length - 1];
-          if (!last || last.score !== real.riskScore || last.date !== analyzedAt) {
-            history.push({ date: analyzedAt ?? new Date().toISOString(), score: real.riskScore, label: real.riskLabel });
-            localStorage.setItem("gr:risk-history", JSON.stringify(history.slice(-20)));
-          }
-        } catch { /* ignore */ }
+        // Append to risk history — only when analyzedAt is set and differs from last entry
+        if (analyzedAt) {
+          try {
+            const history: { date: string; score: number; label: string }[] =
+              JSON.parse(localStorage.getItem("gr:risk-history") || "[]");
+            const last = history[history.length - 1];
+            if (!last || last.date !== analyzedAt) {
+              history.push({ date: analyzedAt, score: real.riskScore, label: real.riskLabel });
+              localStorage.setItem("gr:risk-history", JSON.stringify(history.slice(-20)));
+            }
+          } catch { /* ignore */ }
+        }
 
         // Restore saved date edits
         const dateEdits: Record<string, Record<string, string>> =
@@ -829,6 +831,24 @@ export default function DashboardPage() {
       const demoRaw = localStorage.getItem("gr:demo-analysis");
       if (demoRaw) {
         const demo = rawToScenario(JSON.parse(demoRaw) as RawAnalysis);
+
+        // Restore manual additions saved against "sample-analysis"
+        const demoManualAssignments: Record<string, Scenario["assignments"]> =
+          JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
+        if (demoManualAssignments["sample-analysis"]?.length) {
+          demo.assignments = [...demo.assignments, ...demoManualAssignments["sample-analysis"]];
+        }
+        const demoManualExams: Record<string, Scenario["exams"]> =
+          JSON.parse(localStorage.getItem("gr:manual-exams") || "{}");
+        if (demoManualExams["sample-analysis"]?.length) {
+          demo.exams = [...demo.exams, ...demoManualExams["sample-analysis"]];
+        }
+        const demoManualCourses: Record<string, Scenario["courses"]> =
+          JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
+        if (demoManualCourses["sample-analysis"]?.length) {
+          demo.courses = [...demo.courses, ...demoManualCourses["sample-analysis"]];
+        }
+
         newScenarios.push({ ...demo, id: "sample-analysis", label: "Sample Analysis", semester: "Sample Semester" });
       }
     } catch { /* corrupt demo data — skip */ }
@@ -857,6 +877,8 @@ export default function DashboardPage() {
     setNewItem({ title: "", due: "", course: "", weight: "" });
     setShowAddExamForm(false);
     setNewExam({ title: "", date: "", course: "" });
+    setCompleting([]);
+    setCompletingExams([]);
   }, [activeId]);
 
   function saveDate(idx: number, value: string) {
@@ -998,6 +1020,14 @@ export default function DashboardPage() {
     }, 500);
   }
 
+  function dismissDemo() {
+    try { localStorage.removeItem("gr:demo-analysis"); } catch { /* ignore */ }
+    const remaining = scenarios.filter((sc) => sc.id !== "sample-analysis");
+    const fallback = remaining.length > 0 ? remaining : SCENARIOS;
+    setScenarios(fallback);
+    if (activeId === "sample-analysis") setActiveId(fallback[0].id);
+  }
+
   function addExam() {
     if (!newExam.title.trim()) return;
     const base: Scenario["exams"][number] = {
@@ -1026,11 +1056,15 @@ export default function DashboardPage() {
 
   const s = scenarios.find((x) => x.id === activeId) ?? (hasUpload ? null : scenarios[0]);
 
-  // Real upload data not yet hydrated from localStorage — show blank shell
+  // Real upload data not yet hydrated from localStorage — show spinner
   if (!s) {
     return (
       <div className="min-h-screen bg-[#fdf4e7] dark:bg-slate-950">
         <SiteHeader />
+        <div className="flex flex-col items-center justify-center py-40 gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-200 border-t-red-500 dark:border-slate-700 dark:border-t-indigo-400" />
+          <p className="text-sm text-red-400 dark:text-slate-500">Loading your analysis…</p>
+        </div>
       </div>
     );
   }
@@ -1066,25 +1100,37 @@ export default function DashboardPage() {
 
         {/* Demo mode banner */}
         {activeId !== "your-analysis" && (
-          <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800/40 dark:bg-amber-950/15">
-            <span className="text-sm">👀</span>
-            <p className="text-xs text-amber-800 dark:text-amber-400">
-              You&apos;re viewing <span className="font-semibold">sample data</span> —{" "}
-              {hasUpload ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveId("your-analysis")}
-                  className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300"
-                >
-                  switch to Your Analysis
-                </button>
-              ) : (
-                <Link href="/upload" className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
-                  upload a syllabus
-                </Link>
-              )}{" "}
-              to see your own risk score.
-            </p>
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800/40 dark:bg-amber-950/15">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-sm shrink-0">👀</span>
+              <p className="text-xs text-amber-800 dark:text-amber-400">
+                You&apos;re viewing <span className="font-semibold">sample data</span> —{" "}
+                {hasUpload ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveId("your-analysis")}
+                    className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300"
+                  >
+                    switch to Your Analysis
+                  </button>
+                ) : (
+                  <Link href="/upload" className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
+                    upload a syllabus
+                  </Link>
+                )}{" "}
+                to see your own risk score.
+              </p>
+            </div>
+            {activeId === "sample-analysis" && (
+              <button
+                type="button"
+                onClick={dismissDemo}
+                title="Dismiss sample analysis"
+                className="shrink-0 text-xs text-amber-500 underline underline-offset-2 hover:text-amber-700 dark:text-amber-600 dark:hover:text-amber-400"
+              >
+                Dismiss
+              </button>
+            )}
           </div>
         )}
 

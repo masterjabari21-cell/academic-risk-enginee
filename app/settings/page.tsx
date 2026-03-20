@@ -178,6 +178,18 @@ export default function SettingsPage() {
   }
 
   function handleClearData() {
+    try {
+      [
+        "gr:analysis",
+        "gr:analyzed-at",
+        "gr:risk-history",
+        "gr:manual-assignments",
+        "gr:manual-courses",
+        "gr:manual-exams",
+        "gr:date-edits",
+        "gr:sim-grades",
+      ].forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
     setCleared(true);
     setTimeout(() => setCleared(false), 2500);
   }
