@@ -747,7 +747,10 @@ export default function DashboardPage() {
   const [newCourse,     setNewCourse]     = useState({ name: "", code: "", credits: "" });
   const [lastAnalyzed,  setLastAnalyzed]  = useState<string | null>(null);
   const [simGrades,     setSimGrades]     = useState<Record<string, string>>({});
-  const [completing,    setCompleting]    = useState<number[]>([]);
+  const [completing,      setCompleting]      = useState<number[]>([]);
+  const [completingExams, setCompletingExams] = useState<number[]>([]);
+  const [showAddExamForm, setShowAddExamForm] = useState(false);
+  const [newExam,         setNewExam]         = useState({ title: "", date: "", course: "" });
 
   useEffect(() => {
     const newScenarios: Scenario[] = [];
@@ -808,6 +811,13 @@ export default function DashboardPage() {
           real.courses = [...real.courses, ...manualCourses["your-analysis"]];
         }
 
+        // Restore manually added exams
+        const manualExams: Record<string, Scenario["exams"]> =
+          JSON.parse(localStorage.getItem("gr:manual-exams") || "{}");
+        if (manualExams["your-analysis"]?.length) {
+          real.exams = [...real.exams, ...manualExams["your-analysis"]];
+        }
+
         newScenarios.push(real);
         setHasUpload(true);
         setActiveId("your-analysis");
@@ -845,6 +855,8 @@ export default function DashboardPage() {
     setEditingDate(null);
     setShowAddForm(false);
     setNewItem({ title: "", due: "", course: "", weight: "" });
+    setShowAddExamForm(false);
+    setNewExam({ title: "", date: "", course: "" });
   }, [activeId]);
 
   function saveDate(idx: number, value: string) {
@@ -959,6 +971,57 @@ export default function DashboardPage() {
       removeAssignment(idx);
       setCompleting((prev) => prev.filter((i) => i !== idx));
     }, 500);
+  }
+
+  function removeExam(idx: number) {
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        return recalcScenario({ ...sc, exams: sc.exams.filter((_, i) => i !== idx) });
+      })
+    );
+    try {
+      const stored: Record<string, Scenario["exams"]> =
+        JSON.parse(localStorage.getItem("gr:manual-exams") || "{}");
+      if (stored[activeId]) {
+        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s!.exams.length - (stored[activeId]?.length ?? 0)));
+        localStorage.setItem("gr:manual-exams", JSON.stringify(stored));
+      }
+    } catch { /* ignore */ }
+  }
+
+  function markExamDone(idx: number) {
+    setCompletingExams((prev) => [...prev, idx]);
+    setTimeout(() => {
+      removeExam(idx);
+      setCompletingExams((prev) => prev.filter((i) => i !== idx));
+    }, 500);
+  }
+
+  function addExam() {
+    if (!newExam.title.trim()) return;
+    const base: Scenario["exams"][number] = {
+      course: newExam.course.trim() || "Your course",
+      title:  newExam.title.trim(),
+      date:   newExam.date.trim()   || "TBD",
+      prep:   "See syllabus",
+      risk:   "medium",
+      topics: "",
+    };
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeId) return sc;
+        return recalcScenario({ ...sc, exams: [...sc.exams, base] });
+      })
+    );
+    try {
+      const stored: Record<string, typeof base[]> =
+        JSON.parse(localStorage.getItem("gr:manual-exams") || "{}");
+      stored[activeId] = [...(stored[activeId] ?? []), base];
+      localStorage.setItem("gr:manual-exams", JSON.stringify(stored));
+    } catch { /* ignore */ }
+    setNewExam({ title: "", date: "", course: "" });
+    setShowAddExamForm(false);
   }
 
   const s = scenarios.find((x) => x.id === activeId) ?? (hasUpload ? null : scenarios[0]);
@@ -1442,18 +1505,88 @@ export default function DashboardPage() {
             <SectionHeading>Upcoming exams</SectionHeading>
             <Panel>
               <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
-                {s.exams.map((e) => (
-                  <li key={`${activeId}-${e.course}-${e.title}`} className="flex items-start justify-between gap-4 px-5 py-3.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">{e.title}</p>
-                      <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">
-                        {e.course} · {e.date}
-                      </p>
+                {s.exams.map((e, i) => (
+                  <li key={`${activeId}-${e.course}-${e.title}`} className={`px-5 py-3.5 transition-colors duration-300 ${completingExams.includes(i) ? "bg-green-50 dark:bg-green-900/10" : ""}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className={`text-sm font-medium text-red-900 dark:text-slate-100 transition-all duration-300 ${completingExams.includes(i) ? "line-through opacity-50" : ""}`}>
+                          {e.course} — {e.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">
+                          {e.date} · Prep: {e.prep}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <RiskBadge level={e.risk} />
+                        <button
+                          type="button"
+                          onClick={() => markExamDone(i)}
+                          disabled={completingExams.includes(i)}
+                          title="Mark as done"
+                          className="flex h-6 w-6 items-center justify-center rounded-full border border-green-200 bg-white text-green-500 transition hover:bg-green-500 hover:text-white disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-green-600"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1.5 5l2.5 2.5 4.5-4.5" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <RiskBadge level={e.risk} />
+                    {e.topics && (
+                      <p className="mt-1.5 text-xs text-red-600/60 dark:text-slate-500">
+                        {e.topics}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
+
+              {showAddExamForm ? (
+                <div className="border-t border-red-50 px-5 py-4 dark:border-slate-700/60">
+                  <p className="mb-2 text-xs font-semibold text-red-500 dark:text-slate-400">New exam</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { key: "title",  placeholder: "Exam name *",              cls: "sm:col-span-2" },
+                      { key: "date",   placeholder: "Date (e.g. Apr 10) or TBD" },
+                      { key: "course", placeholder: "Course (optional)" },
+                    ].map(({ key, placeholder, cls }) => (
+                      <input
+                        key={key}
+                        placeholder={placeholder}
+                        value={newExam[key as keyof typeof newExam]}
+                        onChange={(e) => setNewExam((p) => ({ ...p, [key]: e.target.value }))}
+                        className={`rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-indigo-500 ${cls ?? ""}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={addExam}
+                      disabled={!newExam.title.trim()}
+                      className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-40 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddExamForm(false); setNewExam({ title: "", date: "", course: "" }); }}
+                      className="rounded-lg bg-red-50 px-4 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-t border-red-50 px-5 py-3 dark:border-slate-700/60">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddExamForm(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-red-400 transition hover:text-red-600 dark:text-slate-500 dark:hover:text-slate-300"
+                  >
+                    <span className="text-base leading-none">+</span> Add exam
+                  </button>
+                </div>
+              )}
             </Panel>
           </section>
 
