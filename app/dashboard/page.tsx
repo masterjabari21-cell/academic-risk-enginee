@@ -1443,21 +1443,14 @@ export default function DashboardPage() {
             <Panel>
               <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
                 {s.exams.map((e) => (
-                  <li key={`${activeId}-${e.course}-${e.title}`} className="px-5 py-3.5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-red-900 dark:text-slate-100">
-                          {e.course} — {e.title}
-                        </p>
-                        <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">
-                          {e.date} · Prep: {e.prep}
-                        </p>
-                      </div>
-                      <RiskBadge level={e.risk} />
+                  <li key={`${activeId}-${e.course}-${e.title}`} className="flex items-start justify-between gap-4 px-5 py-3.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-red-900 dark:text-slate-100">{e.title}</p>
+                      <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">
+                        {e.course} · {e.date}
+                      </p>
                     </div>
-                    <p className="mt-1.5 text-xs text-red-600/60 dark:text-slate-500">
-                      {e.topics}
-                    </p>
+                    <RiskBadge level={e.risk} />
                   </li>
                 ))}
               </ul>
