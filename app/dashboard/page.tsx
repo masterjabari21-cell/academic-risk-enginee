@@ -876,15 +876,7 @@ export default function DashboardPage() {
     setScenarios((prev) =>
       prev.map((sc) => {
         if (sc.id !== activeId) return sc;
-        const courses = [...sc.courses, course];
-        const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
-        const creditMult =
-          totalCredits >= 20 ? 1.4 : totalCredits >= 18 ? 1.25 :
-          totalCredits >= 17 ? 1.15 : totalCredits >= 15 ? 1.0 :
-          totalCredits >= 12 ? 0.9 : 0.8;
-        const workload = sc.assignments.length + sc.exams.length * 1.5;
-        const riskScore = Math.min(95, Math.max(5, Math.round(workload * 5 * creditMult)));
-        return { ...sc, courses, riskScore };
+        return recalcScenario({ ...sc, courses: [...sc.courses, course] });
       })
     );
     try {
@@ -901,15 +893,7 @@ export default function DashboardPage() {
     setScenarios((prev) =>
       prev.map((sc) => {
         if (sc.id !== activeId) return sc;
-        const courses = sc.courses.filter((_, i) => i !== idx);
-        const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
-        const creditMult =
-          totalCredits >= 20 ? 1.4 : totalCredits >= 18 ? 1.25 :
-          totalCredits >= 17 ? 1.15 : totalCredits >= 15 ? 1.0 :
-          totalCredits >= 12 ? 0.9 : totalCredits > 0 ? 0.8 : 1.0;
-        const workload = sc.assignments.length + sc.exams.length * 1.5;
-        const riskScore = Math.min(95, Math.max(5, Math.round(workload * 5 * creditMult)));
-        return { ...sc, courses, riskScore };
+        return recalcScenario({ ...sc, courses: sc.courses.filter((_, i) => i !== idx) });
       })
     );
     try {
