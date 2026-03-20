@@ -1271,6 +1271,11 @@ export default function DashboardPage() {
 
         </div>
 
+        {/* ── Semester Timeline ── */}
+        <section className="mt-4">
+          <SemesterTimeline scenario={s} />
+        </section>
+
         {/* ── Danger weeks ── */}
         <section className="mt-8">
           <SectionHeading>Danger weeks</SectionHeading>
@@ -1320,10 +1325,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* ── Semester stats + Timeline ── */}
-        <section className="mt-8 space-y-4">
+        {/* ── Semester stats ── */}
+        <section className="mt-8">
           <StatsBar scenario={s} />
-          <SemesterTimeline scenario={s} />
         </section>
 
         {/* ── Assignments + Exams ── */}
