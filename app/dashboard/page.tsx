@@ -1157,27 +1157,28 @@ export default function DashboardPage() {
                   {sc.label}
                 </button>
               ))}
-              {/* Secondary: hand-crafted mock scenarios only */}
-              {scenarios.some((sc) => sc.id !== "your-analysis" && sc.id !== "sample-analysis") && (
-                <>
-                  <span className="ml-1 text-xs text-red-300 dark:text-slate-600">·</span>
-                  <span className="text-xs text-red-300 dark:text-slate-600">Sample scenarios:</span>
-                  {scenarios.filter((sc) => sc.id !== "your-analysis" && sc.id !== "sample-analysis").map((sc) => (
-                    <button
-                      key={sc.id}
-                      type="button"
-                      onClick={() => setActiveId(sc.id)}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ${
-                        activeId === sc.id
-                          ? "bg-slate-400 text-white dark:bg-slate-600"
-                          : "bg-red-50/60 text-red-400 hover:bg-red-100 dark:bg-slate-800/60 dark:text-slate-500 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      {sc.label}
-                    </button>
-                  ))}
-                </>
-              )}
+              {/* Secondary: always show the hand-crafted mock scenarios */}
+              <span className="ml-1 text-xs text-red-300 dark:text-slate-600">·</span>
+              <span className="text-xs text-red-300 dark:text-slate-600">Sample scenarios:</span>
+              {SCENARIOS.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => {
+                    setScenarios((prev) =>
+                      prev.some((x) => x.id === sc.id) ? prev : [...prev, sc]
+                    );
+                    setActiveId(sc.id);
+                  }}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ${
+                    activeId === sc.id
+                      ? "bg-slate-400 text-white dark:bg-slate-600"
+                      : "bg-red-50/60 text-red-400 hover:bg-red-100 dark:bg-slate-800/60 dark:text-slate-500 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
             </>
           ) : (
             <>
