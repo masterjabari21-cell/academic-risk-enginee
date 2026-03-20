@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "../components/ui";
 
@@ -352,8 +353,8 @@ export default function SettingsPage() {
               <p className="mt-0.5 text-xs text-red-400 dark:text-slate-500">Version 1.0.0 · Beta · No data leaves your device.</p>
             </div>
             <div className="flex gap-3 text-xs text-red-400 dark:text-slate-500">
-              <button type="button" className="hover:text-red-600 dark:hover:text-slate-300">Privacy</button>
-              <button type="button" className="hover:text-red-600 dark:hover:text-slate-300">Terms</button>
+              <Link href="/privacy" className="hover:text-red-600 dark:hover:text-slate-300">Privacy</Link>
+              <Link href="/terms" className="hover:text-red-600 dark:hover:text-slate-300">Terms</Link>
               <button type="button" className="hover:text-red-600 dark:hover:text-slate-300">Feedback</button>
             </div>
           </div>
