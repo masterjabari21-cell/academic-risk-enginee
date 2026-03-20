@@ -60,14 +60,13 @@ interface Course {
 let _id = 6;
 function nextId() { return String(++_id); }
 
-// ── Default courses (matches dashboard mock) ───────────────────────────────
-
+// ── Default courses — matches the "Heavy Load" demo scenario on the dashboard
 const DEFAULT_COURSES: Course[] = [
-  { id: "1", name: "Calculus II",         code: "MATH 202", credits: 4, currentGrade: "B+", targetGrade: "A-" },
-  { id: "2", name: "Data Structures",     code: "CS 301",   credits: 3, currentGrade: "A-", targetGrade: "A"  },
-  { id: "3", name: "Physics I",           code: "PHYS 101", credits: 4, currentGrade: "B",  targetGrade: "B+" },
-  { id: "4", name: "English Composition", code: "ENG 110",  credits: 3, currentGrade: "A",  targetGrade: "A"  },
-  { id: "5", name: "Intro to Psychology", code: "PSY 101",  credits: 3, currentGrade: "A-", targetGrade: "A"  },
+  { id: "1", name: "Algorithms & Complexity", code: "CS 3510",   credits: 3, currentGrade: "B+", targetGrade: "A-" },
+  { id: "2", name: "Differential Equations",  code: "MATH 2420", credits: 4, currentGrade: "B",  targetGrade: "B+" },
+  { id: "3", name: "Physics II: E&M",         code: "PHYS 2211", credits: 4, currentGrade: "B+", targetGrade: "A-" },
+  { id: "4", name: "Technical Writing",       code: "ENG 3050",  credits: 3, currentGrade: "A-", targetGrade: "A"  },
+  { id: "5", name: "Principles of Chemistry", code: "CHEM 1310", credits: 4, currentGrade: "B",  targetGrade: "B+" },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -130,9 +129,10 @@ function GPAGauge({ label, gpa, sub }: { label: string; gpa: number; sub?: strin
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function SimulatePage() {
-  const [courses, setCourses] = useState<Course[]>(DEFAULT_COURSES);
-  const [priorGPA,     setPriorGPA]     = useState("3.20");
-  const [priorCredits, setPriorCredits] = useState("45");
+  const [courses,     setCourses]     = useState<Course[]>(DEFAULT_COURSES);
+  const [priorGPA,    setPriorGPA]    = useState("3.20");
+  const [priorCredits,setPriorCredits]= useState("45");
+  const [fromUpload,  setFromUpload]  = useState(false);
 
   useEffect(() => {
     try {
@@ -140,14 +140,17 @@ export default function SimulatePage() {
       if (!raw) return;
       const data = JSON.parse(raw) as { courses?: { name: string; code: string; credits: number }[] };
       const loaded = (data.courses ?? []).map((c, i) => ({
-        id: String(i + 1),
-        name: c.name,
-        code: c.code,
-        credits: c.credits,
-        currentGrade: "B" as const,
+        id:           String(i + 1),
+        name:         c.name,
+        code:         c.code,
+        credits:      c.credits,
+        currentGrade: "B"  as const,
         targetGrade:  "B+" as const,
       }));
-      if (loaded.length > 0) setCourses(loaded);
+      if (loaded.length > 0) {
+        setCourses(loaded);
+        setFromUpload(true);
+      }
     } catch { /* fall back to defaults */ }
   }, []);
 
@@ -187,9 +190,30 @@ export default function SimulatePage() {
 
       <main className="mx-auto w-full max-w-5xl px-4 py-10 pb-20 sm:px-6 lg:px-8">
 
-        <p className="mb-8 text-xs font-semibold uppercase tracking-widest text-red-500 dark:text-indigo-400">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-red-500 dark:text-indigo-400">
           GPA Simulator
         </p>
+
+        {/* Sync banner */}
+        {fromUpload ? (
+          <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 dark:border-green-800/40 dark:bg-green-950/15">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">✓</span>
+            <p className="text-xs text-green-800 dark:text-green-400">
+              Courses synced from your uploaded syllabus — set your current grades below.
+            </p>
+          </div>
+        ) : (
+          <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800/40 dark:bg-amber-950/15">
+            <span className="text-sm">👀</span>
+            <p className="text-xs text-amber-800 dark:text-amber-400">
+              Showing sample courses —{" "}
+              <a href="/upload" className="underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
+                upload a syllabus
+              </a>{" "}
+              to sync your real course list automatically.
+            </p>
+          </div>
+        )}
 
         {/* ── GPA summary cards ── */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -302,14 +326,15 @@ export default function SimulatePage() {
                         type="text"
                         value={course.name}
                         onChange={(e) => updateCourse(course.id, "name", e.target.value)}
-                        className="w-full bg-transparent text-sm font-medium text-red-900 focus:outline-none dark:text-slate-100"
+                        placeholder="Course name"
+                        className="w-full rounded border border-transparent bg-white px-1 text-sm font-medium text-red-900 hover:border-red-100 focus:border-red-300 focus:outline-none dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-slate-500"
                       />
                       <input
                         type="text"
                         value={course.code}
                         onChange={(e) => updateCourse(course.id, "code", e.target.value)}
                         placeholder="Course code"
-                        className="w-full bg-transparent text-xs text-red-400 placeholder:text-red-200 focus:outline-none dark:text-slate-500 dark:placeholder:text-slate-700"
+                        className="mt-0.5 w-full rounded border border-transparent bg-white px-1 text-xs text-red-400 placeholder:text-red-200 hover:border-red-100 focus:border-red-300 focus:outline-none dark:bg-slate-800 dark:text-slate-500 dark:placeholder:text-slate-700 dark:hover:border-slate-600 dark:focus:border-slate-500"
                       />
                     </div>
 
