@@ -1238,7 +1238,7 @@ export default function DashboardPage() {
             {s.dangerWeeks.map((w) => {
               const st = WEEK_STYLES[w.load];
               return (
-                <div key={w.week} className={`rounded-2xl border p-5 ${st.wrapper}`}>
+                <div key={`${activeId}-${w.week}`} className={`rounded-2xl border p-5 ${st.wrapper}`}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{w.week}</p>
                     <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${st.badge}`}>
@@ -1399,7 +1399,7 @@ export default function DashboardPage() {
             <Panel>
               <ul className="divide-y divide-red-50 dark:divide-slate-700/60">
                 {s.exams.map((e) => (
-                  <li key={e.title} className="px-5 py-3.5">
+                  <li key={`${activeId}-${e.course}-${e.title}`} className="px-5 py-3.5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-red-900 dark:text-slate-100">
