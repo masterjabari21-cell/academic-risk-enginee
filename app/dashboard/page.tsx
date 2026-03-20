@@ -1440,9 +1440,11 @@ export default function DashboardPage() {
                         onClick={() => markDone(i)}
                         title="Mark as done"
                         disabled={completing.includes(i)}
-                        className={`rounded-full p-1 transition ${completing.includes(i) ? "text-green-500 dark:text-green-400" : "text-red-200 hover:bg-green-100 hover:text-green-600 dark:text-slate-600 dark:hover:bg-green-900/30 dark:hover:text-green-400"}`}
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-green-200 bg-white text-green-500 transition hover:bg-green-500 hover:text-white disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-green-600"
                       >
-                        ✓
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1.5 5l2.5 2.5 4.5-4.5" />
+                        </svg>
                       </button>
                     </div>
                   </li>
