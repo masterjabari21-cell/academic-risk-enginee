@@ -106,6 +106,8 @@ export function computeSemesterRisk(
   const weekCounts = new Map<string, number>(); // raw item count
 
   let examCount = 0;
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
   for (const item of items) {
     const d = parseDate(item.date);
     if (!d) continue;
@@ -114,6 +116,8 @@ export function computeSemesterRisk(
     weekLoads.set(key,  (weekLoads.get(key)  ?? 0) + load);
     weekCounts.set(key, (weekCounts.get(key) ?? 0) + 1);
     if (item.kind === "exam") examCount++;
+    if (!minDate || d < minDate) minDate = d;
+    if (!maxDate || d > maxDate) maxDate = d;
   }
 
   if (weekLoads.size === 0) {
@@ -125,8 +129,14 @@ export function computeSemesterRisk(
     };
   }
 
-  const allLoads  = [...weekLoads.values()];
-  const totalWeeks = allLoads.length;
+  const allLoads = [...weekLoads.values()];
+
+  // Use full semester span so removing one item doesn't shrink the denominator
+  // and artificially inflate averages. Minimum of 10 weeks (a short semester).
+  const spanWeeks = minDate && maxDate
+    ? Math.ceil((maxDate.getTime() - minDate.getTime()) / (7 * 86_400_000)) + 1
+    : weekLoads.size;
+  const totalWeeks = Math.max(spanWeeks, weekLoads.size, 10);
 
   // 1. Average weekly workload
   const avgLoad = allLoads.reduce((s, l) => s + l, 0) / totalWeeks;
