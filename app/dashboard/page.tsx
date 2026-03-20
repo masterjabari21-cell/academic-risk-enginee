@@ -803,7 +803,7 @@ export default function DashboardPage() {
         real.courses = [...real.courses, ...manualCourses["your-analysis"]];
       }
 
-      setScenarios([real]);
+      setScenarios([real, ...SCENARIOS]);
       setActiveId("your-analysis");
       setHasUpload(true);
     } catch {
@@ -942,16 +942,6 @@ export default function DashboardPage() {
 
   const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
 
-  // Real upload: scenarios starts as SCENARIOS until useEffect fires.
-  // While activeId is "your-analysis" but the scenario isn't loaded yet, show nothing.
-  if (!s) {
-    return (
-      <div className="min-h-screen bg-[#fdf4e7] dark:bg-slate-950">
-        <SiteHeader />
-      </div>
-    );
-  }
-
   const scoreDash   = 283;
   const scoreOffset = scoreDash - (scoreDash * s.riskScore) / 100;
 
@@ -995,32 +985,72 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Scenario switcher — only shown when no real upload exists ── */}
-        {!hasUpload && (
-          <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
-              Sample scenarios
-            </span>
-            {scenarios.map((sc) => (
-              <button
-                key={sc.id}
-                type="button"
-                onClick={() => setActiveId(sc.id)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                  activeId === sc.id
-                    ? sc.riskLabel === "High"
-                      ? "bg-red-600 text-white shadow-sm dark:bg-red-700"
-                      : sc.riskLabel === "Medium"
-                      ? "bg-amber-500 text-white shadow-sm dark:bg-amber-600"
-                      : "bg-green-500 text-white shadow-sm dark:bg-green-600"
-                    : "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                }`}
-              >
-                {sc.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* ── Scenario switcher ── */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {hasUpload ? (
+            <>
+              {/* Real upload: show only Your Analysis + clearly-labeled demo toggle */}
+              {scenarios.filter((sc) => sc.id === "your-analysis" || activeId === sc.id).map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => setActiveId(sc.id)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                    activeId === sc.id
+                      ? sc.riskLabel === "High"
+                        ? "bg-red-600 text-white shadow-sm dark:bg-red-700"
+                        : sc.riskLabel === "Medium"
+                        ? "bg-amber-500 text-white shadow-sm dark:bg-amber-600"
+                        : "bg-green-500 text-white shadow-sm dark:bg-green-600"
+                      : "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
+              <span className="ml-1 text-xs text-red-300 dark:text-slate-600">·</span>
+              <span className="text-xs text-red-300 dark:text-slate-600">Sample scenarios:</span>
+              {scenarios.filter((sc) => sc.id !== "your-analysis").map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => setActiveId(sc.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ${
+                    activeId === sc.id
+                      ? "bg-slate-400 text-white dark:bg-slate-600"
+                      : "bg-red-50/60 text-red-400 hover:bg-red-100 dark:bg-slate-800/60 dark:text-slate-500 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
+                Sample scenarios
+              </span>
+              {scenarios.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => setActiveId(sc.id)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                    activeId === sc.id
+                      ? sc.riskLabel === "High"
+                        ? "bg-red-600 text-white shadow-sm dark:bg-red-700"
+                        : sc.riskLabel === "Medium"
+                        ? "bg-amber-500 text-white shadow-sm dark:bg-amber-600"
+                        : "bg-green-500 text-white shadow-sm dark:bg-green-600"
+                      : "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
 
         {/* ── Risk score + courses + recommended actions ── */}
         <div className="grid gap-4 md:grid-cols-[240px_1fr] lg:grid-cols-[240px_1fr_260px]">
