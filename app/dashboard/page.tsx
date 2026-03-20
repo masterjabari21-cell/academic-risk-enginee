@@ -729,8 +729,15 @@ function SemesterTimeline({ scenario }: { scenario: Scenario }) {
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const [hasUpload, setHasUpload] = useState(() =>
+    typeof window !== "undefined" && !!localStorage.getItem("gr:analysis")
+  );
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
-  const [activeId,  setActiveId]  = useState("heavy-load");
+  const [activeId,  setActiveId]  = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("gr:analysis")
+      ? "your-analysis"
+      : "heavy-load"
+  );
   const [editingDate, setEditingDate] = useState<{ idx: number; value: string } | null>(null);
   const [showAddForm,   setShowAddForm]   = useState(false);
   const [newItem,       setNewItem]       = useState({ title: "", due: "", course: "", weight: "" });
@@ -798,6 +805,7 @@ export default function DashboardPage() {
 
       setScenarios([real, ...SCENARIOS]);
       setActiveId("your-analysis");
+      setHasUpload(true);
     } catch {
       // corrupt data — fall back to mock scenarios silently
     }
@@ -979,27 +987,69 @@ export default function DashboardPage() {
 
         {/* ── Scenario switcher ── */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
-            Sample scenarios
-          </span>
-          {scenarios.map((sc) => (
-            <button
-              key={sc.id}
-              type="button"
-              onClick={() => setActiveId(sc.id)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                activeId === sc.id
-                  ? sc.riskLabel === "High"
-                    ? "bg-red-600 text-white shadow-sm dark:bg-red-700"
-                    : sc.riskLabel === "Medium"
-                    ? "bg-amber-500 text-white shadow-sm dark:bg-amber-600"
-                    : "bg-green-500 text-white shadow-sm dark:bg-green-600"
-                  : "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              }`}
-            >
-              {sc.label}
-            </button>
-          ))}
+          {hasUpload ? (
+            <>
+              {/* Real upload: show only Your Analysis + clearly-labeled demo toggle */}
+              {scenarios.filter((sc) => sc.id === "your-analysis" || activeId === sc.id).map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => setActiveId(sc.id)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                    activeId === sc.id
+                      ? sc.riskLabel === "High"
+                        ? "bg-red-600 text-white shadow-sm dark:bg-red-700"
+                        : sc.riskLabel === "Medium"
+                        ? "bg-amber-500 text-white shadow-sm dark:bg-amber-600"
+                        : "bg-green-500 text-white shadow-sm dark:bg-green-600"
+                      : "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
+              <span className="ml-1 text-xs text-red-300 dark:text-slate-600">·</span>
+              <span className="text-xs text-red-300 dark:text-slate-600">Sample scenarios:</span>
+              {scenarios.filter((sc) => sc.id !== "your-analysis").map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => setActiveId(sc.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 ${
+                    activeId === sc.id
+                      ? "bg-slate-400 text-white dark:bg-slate-600"
+                      : "bg-red-50/60 text-red-400 hover:bg-red-100 dark:bg-slate-800/60 dark:text-slate-500 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">
+                Sample scenarios
+              </span>
+              {scenarios.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => setActiveId(sc.id)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                    activeId === sc.id
+                      ? sc.riskLabel === "High"
+                        ? "bg-red-600 text-white shadow-sm dark:bg-red-700"
+                        : sc.riskLabel === "Medium"
+                        ? "bg-amber-500 text-white shadow-sm dark:bg-amber-600"
+                        : "bg-green-500 text-white shadow-sm dark:bg-green-600"
+                      : "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {sc.label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
         {/* ── Risk score + courses + recommended actions ── */}
