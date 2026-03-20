@@ -803,7 +803,7 @@ export default function DashboardPage() {
         real.courses = [...real.courses, ...manualCourses["your-analysis"]];
       }
 
-      setScenarios([real, ...SCENARIOS]);
+      setScenarios([real]);
       setActiveId("your-analysis");
       setHasUpload(true);
     } catch {
@@ -828,7 +828,7 @@ export default function DashboardPage() {
 
   function saveDate(idx: number, value: string) {
     const trimmed = value.trim() || "TBD";
-    const title = s.assignments[idx].title;
+    const title = s!.assignments[idx].title;
     setScenarios((prev) =>
       prev.map((sc) => {
         if (sc.id !== activeId) return sc;
@@ -908,7 +908,7 @@ export default function DashboardPage() {
       const stored: Record<string, { name: string; code: string; credits: number }[]> =
         JSON.parse(localStorage.getItem("gr:manual-courses") || "{}");
       if (stored[activeId]) {
-        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s.courses.length - (stored[activeId]?.length ?? 0)));
+        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s!.courses.length - (stored[activeId]?.length ?? 0)));
         localStorage.setItem("gr:manual-courses", JSON.stringify(stored));
       }
     } catch { /* ignore */ }
@@ -926,7 +926,7 @@ export default function DashboardPage() {
       const stored: Record<string, { title: string; due: string; course: string; risk: string; weight: string }[]> =
         JSON.parse(localStorage.getItem("gr:manual-assignments") || "{}");
       if (stored[activeId]) {
-        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s.assignments.length - (stored[activeId]?.length ?? 0)));
+        stored[activeId] = stored[activeId].filter((_, i) => i !== idx - (s!.assignments.length - (stored[activeId]?.length ?? 0)));
         localStorage.setItem("gr:manual-assignments", JSON.stringify(stored));
       }
     } catch { /* ignore */ }
@@ -940,7 +940,16 @@ export default function DashboardPage() {
     }, 500);
   }
 
-  const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
+  const s = scenarios.find((x) => x.id === activeId) ?? (hasUpload ? null : scenarios[0]);
+
+  // Real upload data not yet hydrated from localStorage — show blank shell
+  if (!s) {
+    return (
+      <div className="min-h-screen bg-[#fdf4e7] dark:bg-slate-950">
+        <SiteHeader />
+      </div>
+    );
+  }
 
   const scoreDash   = 283;
   const scoreOffset = scoreDash - (scoreDash * s.riskScore) / 100;

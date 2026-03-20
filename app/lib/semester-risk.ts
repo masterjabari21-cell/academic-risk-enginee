@@ -152,10 +152,10 @@ export function computeSemesterRisk(
   const examDensity = examCount / totalWeeks;
 
   // Normalize each component to 0–1, then apply its max pts
-  const avgScore    = Math.min(avgLoad    / 6,   1) * 25; // avg 6+ → max 25
-  const maxScore    = Math.min(maxLoad    / 10,  1) * 30; // max 10+ → max 30
-  const dangerScore = Math.min(dangerCount / 4,  1) * 25; // 4+ weeks → max 25
-  const examScore   = Math.min(examDensity / 0.5, 1) * 20; // exam every 2 wks → max 20
+  const avgScore    = Math.min(avgLoad    / 8,    1) * 25; // avg 8+ → max 25
+  const maxScore    = Math.min(maxLoad    / 10,   1) * 30; // max 10+ → max 30
+  const dangerScore = Math.min(dangerCount / 4,   1) * 25; // 4+ weeks → max 25
+  const examScore   = Math.min(examDensity / 0.75, 1) * 20; // exam every 1.3 wks → max 20
 
   const rawScore = avgScore + maxScore + dangerScore + examScore;
 

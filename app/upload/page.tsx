@@ -1,10 +1,57 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { SiteHeader } from "../components/ui";
+
+// ── Pre-built demo dataset ────────────────────────────────────────────────────
+// Mirrors the RawAnalysis shape Claude returns so rawToScenario processes it
+// identically to a real upload. Used by "Try Demo" and "View sample insights".
+const DEMO_ANALYSIS = {
+  courses: [
+    { name: "Data Structures",        code: "CS 2110",   credits: 3 },
+    { name: "Database Systems",       code: "CS 4400",   credits: 3 },
+    { name: "Multivariable Calculus", code: "MATH 2401", credits: 4 },
+    { name: "Physics I: Mechanics",   code: "PHYS 2211", credits: 4 },
+    { name: "Technical Writing",      code: "ENGL 3109", credits: 2 },
+  ],
+  assignments: [
+    { name: "Linked List Lab",           due_date: "Feb 7",  points: "8%",  course_code: "CS 2110"   },
+    { name: "BST Implementation",        due_date: "Mar 6",  points: "12%", course_code: "CS 2110"   },
+    { name: "Graph Algorithms Project",  due_date: "Apr 11", points: "18%", course_code: "CS 2110"   },
+    { name: "ER Diagram",                due_date: "Feb 14", points: "8%",  course_code: "CS 4400"   },
+    { name: "SQL Project",               due_date: "Mar 28", points: "20%", course_code: "CS 4400"   },
+    { name: "Problem Set 4",             due_date: "Feb 28", points: "5%",  course_code: "MATH 2401" },
+    { name: "Problem Set 6",             due_date: "Mar 28", points: "5%",  course_code: "MATH 2401" },
+    { name: "Lab Report 2",              due_date: "Mar 6",  points: "5%",  course_code: "PHYS 2211" },
+    { name: "Lab Report 3",              due_date: "Apr 3",  points: "5%",  course_code: "PHYS 2211" },
+    { name: "Technical Report Draft",    due_date: "Mar 20", points: "15%", course_code: "ENGL 3109" },
+    { name: "Final Technical Report",    due_date: "Apr 25", points: "30%", course_code: "ENGL 3109" },
+  ],
+  exams: [
+    { name: "Midterm I",  date: "Mar 5",  type: "Midterm", course_code: "CS 2110"   },
+    { name: "Midterm",    date: "Mar 12", type: "Midterm", course_code: "CS 4400"   },
+    { name: "Midterm I",  date: "Mar 18", type: "Midterm", course_code: "MATH 2401" },
+    { name: "Midterm",    date: "Mar 26", type: "Midterm", course_code: "PHYS 2211" },
+    { name: "Final Exam", date: "Apr 28", type: "Final",   course_code: "CS 2110"   },
+    { name: "Final Exam", date: "Apr 30", type: "Final",   course_code: "CS 4400"   },
+    { name: "Final Exam", date: "May 2",  type: "Final",   course_code: "MATH 2401" },
+    { name: "Final Exam", date: "May 5",  type: "Final",   course_code: "PHYS 2211" },
+  ],
+  deadlines: [
+    { name: "Course withdrawal deadline", date: "Feb 7"  },
+    { name: "Spring Break — no classes",  date: "Mar 22" },
+  ],
+};
+
+function seedDemo(router: ReturnType<typeof useRouter>) {
+  try {
+    localStorage.setItem("gr:analysis",    JSON.stringify(DEMO_ANALYSIS));
+    localStorage.setItem("gr:analyzed-at", new Date().toISOString());
+  } catch { /* ignore */ }
+  router.push("/dashboard");
+}
 
 interface UploadedFile {
   name: string;
@@ -31,6 +78,13 @@ export default function UploadPage() {
   const [files,    setFiles]    = useState<UploadedFile[]>([]);
   const [step,     setStep]     = useState<Step>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Auto-seed demo when navigated here with ?demo=1
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("demo") === "1") {
+      seedDemo(router);
+    }
+  }, [router]);
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles((prev) => {
@@ -275,12 +329,13 @@ export default function UploadPage() {
           <p className="text-center text-xs text-red-400/50 dark:text-slate-600">
             Don&apos;t have a syllabus handy?
           </p>
-          <Link
-            href="/dashboard"
+          <button
+            type="button"
+            onClick={() => seedDemo(router)}
             className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-4 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             <span>▶</span> Try Demo
-          </Link>
+          </button>
         </div>
 
       </main>

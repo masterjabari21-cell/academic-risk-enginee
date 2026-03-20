@@ -69,7 +69,7 @@ export default function Home() {
             Start your analysis
           </Link>
           <Link
-            href="/dashboard"
+            href="/upload?demo=1"
             className="rounded-full border border-[#fdf4e7]/10 bg-[#fdf4e7]/5 px-8 py-3.5 text-sm font-semibold text-[#c9a882] backdrop-blur transition hover:bg-[#fdf4e7]/10 hover:text-[#fdf4e7] active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
           >
             View sample insights →
