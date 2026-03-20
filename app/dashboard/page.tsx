@@ -732,11 +732,7 @@ export default function DashboardPage() {
   const [hasUpload, setHasUpload] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem("gr:analysis")
   );
-  const [scenarios, setScenarios] = useState<Scenario[]>(() =>
-    typeof window !== "undefined" && localStorage.getItem("gr:analysis")
-      ? []   // will be filled by useEffect; avoid flashing mock data
-      : SCENARIOS
-  );
+  const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
   const [activeId,  setActiveId]  = useState(() =>
     typeof window !== "undefined" && localStorage.getItem("gr:analysis")
       ? "your-analysis"
@@ -945,6 +941,16 @@ export default function DashboardPage() {
   }
 
   const s = scenarios.find((x) => x.id === activeId) ?? scenarios[0];
+
+  // Real upload: scenarios starts as SCENARIOS until useEffect fires.
+  // While activeId is "your-analysis" but the scenario isn't loaded yet, show nothing.
+  if (!s) {
+    return (
+      <div className="min-h-screen bg-[#fdf4e7] dark:bg-slate-950">
+        <SiteHeader />
+      </div>
+    );
+  }
 
   const scoreDash   = 283;
   const scoreOffset = scoreDash - (scoreDash * s.riskScore) / 100;
