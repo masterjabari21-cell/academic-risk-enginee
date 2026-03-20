@@ -112,6 +112,14 @@ export function SiteHeader() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
 
+  // Re-apply saved theme on every page mount (guards against hydration stripping the class)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("theme");
+      document.documentElement.classList.toggle("dark", saved === "dark");
+    } catch { /* ignore */ }
+  }, []);
+
   function isActive(href: string) {
     return href === "/" ? pathname === "/" : pathname.startsWith(href);
   }
