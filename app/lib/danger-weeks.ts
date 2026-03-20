@@ -27,6 +27,7 @@ export interface DangerWeek {
   /** Mon–Fri label — e.g. "Mar 21 – Mar 25" */
   week: string;
   load: LoadLevel;
+  summary: string;
   /** Human-readable sentences explaining exactly why this week is flagged. */
   reasons: string[];
   /** Concrete, actionable suggestions. Ready to show in the UI. */
@@ -163,6 +164,45 @@ function buildReasons(
   return reasons;
 }
 
+function buildSummary(
+  items: (WorkloadItem & { parsedDate: Date })[],
+  load: LoadLevel,
+): string {
+  const total   = items.length;
+  const exams   = items.filter((i) => i.kind === "exam").length;
+  const projs   = items.filter((i) => i.kind === "project").length;
+  const assigns = items.filter((i) => i.kind === "assignment" || i.kind === "deadline").length;
+  const quizzes = items.filter((i) => i.kind === "quiz").length;
+  const hasFinal   = items.some((i) => i.kind === "exam" && /final/i.test(i.title));
+  const hasMidterm = items.some((i) => i.kind === "exam" && /midterm/i.test(i.title));
+  const span = clusterSpan(items.map((i) => i.parsedDate));
+
+  const parts: string[] = [];
+  if (exams   > 0) parts.push(pluralize(exams,   "exam"));
+  if (projs   > 0) parts.push(pluralize(projs,   "project"));
+  if (assigns > 0) parts.push(pluralize(assigns, "assignment"));
+  if (quizzes > 0) parts.push(pluralize(quizzes, "quiz"));
+
+  const itemList  = parts.length === 1
+    ? parts[0]
+    : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
+  const spanPhrase = span <= 1 ? "back to back" : span <= 3 ? `within ${span} days` : "spread across the week";
+
+  if (hasFinal) {
+    return `Finals crunch — ${total} item${total !== 1 ? "s" : ""} ${spanPhrase}, anchored by a cumulative final exam.`;
+  }
+  if (load === "Critical" && hasMidterm) {
+    return `${itemList} ${spanPhrase} — midterm pressure compounds everything else this week.`;
+  }
+  if (load === "Critical") {
+    return `Your most dangerous week — ${itemList} ${spanPhrase} with no room for error.`;
+  }
+  if (load === "High") {
+    return `Heavy week ahead — ${itemList} ${spanPhrase}. Front-load your work or it will compound.`;
+  }
+  return `Moderate load — ${itemList} ${spanPhrase}. Manageable with a little early prep.`;
+}
+
 function buildActions(
   items: (WorkloadItem & { parsedDate: Date })[],
   load: LoadLevel,
@@ -259,6 +299,7 @@ export function identifyDangerWeeks(items: WorkloadItem[]): DangerWeek[] {
     return {
       week,
       load,
+      summary: buildSummary(weekItems, load),
       reasons: buildReasons(weekItems),
       actions: buildActions(weekItems, load),
     };

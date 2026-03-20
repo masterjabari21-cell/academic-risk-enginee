@@ -28,6 +28,7 @@ export default function Home() {
         <div className="hidden items-center gap-1 text-sm text-[#e8d5b7] dark:text-slate-400 sm:flex">
           <Link href="/upload" className="rounded-full px-4 py-1.5 transition hover:bg-white/5 hover:text-white">Upload</Link>
           <Link href="/dashboard" className="rounded-full px-4 py-1.5 transition hover:bg-white/5 hover:text-white">Dashboard</Link>
+          <Link href="/simulate" className="rounded-full px-4 py-1.5 transition hover:bg-white/5 hover:text-white">GPA Sim</Link>
           <Link href="/settings" className="rounded-full px-4 py-1.5 transition hover:bg-white/5 hover:text-white">Settings</Link>
           <Link
             href="/upload"
@@ -81,7 +82,11 @@ export default function Home() {
         </p>
 
         {/* ── Live metrics strip ── */}
-        <div className="animate-fade-up-delay-4 mt-20 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="animate-fade-up-delay-4 mt-20">
+          <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-red-800/40 dark:text-slate-700">
+            Sample output
+          </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { value: "72", unit: "/100", label: "Current overload score" },
             { value: "3",  unit: " this week", label: "At-risk modules" },
@@ -99,6 +104,7 @@ export default function Home() {
               <div className="mt-1 text-xs text-[#7a5c3a] dark:text-slate-500">{stat.label}</div>
             </div>
           ))}
+        </div>
         </div>
 
         {/* ── Feature cards ── */}

@@ -169,7 +169,7 @@ interface Scenario {
   riskNote: string;
   scoreReasons: string[];
   courses: { name: string; code: string; credits: number }[];
-  dangerWeeks: { week: string; load: WeekLoad; reasons: string[]; actions?: string[] }[];
+  dangerWeeks: { week: string; load: WeekLoad; summary?: string; reasons: string[]; actions?: string[] }[];
   assignments: { course: string; title: string; due: string; risk: RiskLevel; weight: string }[];
   exams: { course: string; title: string; date: string; prep: string; risk: RiskLevel; topics: string }[];
   actions: { priority: number; label: string; tag: string }[];
@@ -226,6 +226,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Mar 2 – Mar 6",
         load: "Critical",
+        summary: "2 assignments due with a PHYS midterm two days later — no breathing room.",
         reasons: [
           "MATH 2420 Problem Set 5 due Mar 6",
           "CHEM 1310 Titration Lab Report due Mar 6",
@@ -239,6 +240,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Apr 7 – Apr 11",
         load: "Critical",
+        summary: "MATH Midterm II is your hardest exam of the semester, and two other deadlines are closing in.",
         reasons: [
           "MATH 2420 Midterm II on Apr 8 — hardest material of the semester",
           "CS 3510 Dynamic Programming Project (20%) due Apr 17 — prep week begins now",
@@ -252,6 +254,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "May 4 – May 8",
         load: "Critical",
+        summary: "Finals crunch — 3 exams on consecutive days across your three hardest courses.",
         reasons: [
           "PHYS 2211 Final on May 5 — cumulative, includes optics and E&M",
           "MATH 2420 Final on May 6 — comprehensive ODE exam",
@@ -321,6 +324,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Oct 13 – Oct 17",
         load: "High",
+        summary: "ACCT midterm and a 20% paper land in the same week — same subject, double the pressure.",
         reasons: [
           "ACCT 2101 Financial Statement Analysis (20%) due Oct 17",
           "ACCT 2101 Midterm on Oct 15 — same subject, same week",
@@ -334,6 +338,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Oct 20 – Oct 24",
         load: "High",
+        summary: "STAT lab and STAT midterm back to back, with the MGMT midterm already on the horizon.",
         reasons: [
           "STAT 2000 Midterm on Oct 22",
           "STAT 2000 Descriptive Statistics Lab due Oct 24 — same week",
@@ -347,6 +352,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Dec 8 – Dec 12",
         load: "Critical",
+        summary: "Finals crunch — ECON, ACCT, and STAT finals on three consecutive days.",
         reasons: [
           "ECON 2105 Final on Dec 9 — monetary policy and trade included",
           "ACCT 2101 Final on Dec 10 — most comprehensive exam of the semester",
@@ -411,6 +417,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Jun 9 – Jun 13",
         load: "Medium",
+        summary: "HIST midterm Monday, then a close reading paper due Thursday — tight but manageable.",
         reasons: [
           "HIST 2112 Midterm on Jun 9 — covers Reconstruction through WWI",
           "ENGL 2130 Close Reading Analysis due Jun 12 — 3 days after the midterm",
@@ -423,6 +430,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Jul 14 – Jul 18",
         load: "Medium",
+        summary: "The Civil Rights Paper is 30% of your HIST grade — this week is low-volume but high-stakes.",
         reasons: [
           "HIST 2112 Civil Rights Research Paper (30%) due Jul 17",
           "No other major deadlines — but this is 30% of the course grade",
@@ -434,6 +442,7 @@ const SCENARIOS: Scenario[] = [
       {
         week: "Aug 3 – Aug 7",
         load: "High",
+        summary: "Three finals in three days — the only real crunch point of the entire summer semester.",
         reasons: [
           "ENGL 2130 Final on Aug 4 — Fitzgerald, Hemingway, Morrison",
           "HIST 2112 Final on Aug 5 — WWII through present day",
@@ -1175,6 +1184,13 @@ export default function DashboardPage() {
                       {w.load}
                     </span>
                   </div>
+
+                  {/* AI narrative summary */}
+                  {w.summary && (
+                    <p className="mt-2 text-xs font-medium leading-relaxed text-slate-700 dark:text-slate-300">
+                      {w.summary}
+                    </p>
+                  )}
 
                   {/* Why this week is flagged */}
                   <ul className="mt-3 space-y-1.5">

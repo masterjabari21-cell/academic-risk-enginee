@@ -266,7 +266,7 @@ export default function SettingsPage() {
                   className="w-24 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-sm text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:ring-indigo-500"
                 />
               </SettingRow>
-              <SettingRow label="Major" description="Used to weight assignment types.">
+              <SettingRow label="Major" description="Saved for upcoming major-aware risk weighting.">
                 <input
                   type="text"
                   value={profile.major}
@@ -296,6 +296,11 @@ export default function SettingsPage() {
               <SettingRow label="Exam Countdowns" description="Daily countdowns in the week before exams.">
                 <Toggle checked={notifications.examCountdowns} onChange={() => toggleNotification("examCountdowns")} />
               </SettingRow>
+              <div className="px-5 py-3">
+                <p className="text-[11px] text-red-400/60 dark:text-slate-600">
+                  Preferences saved. Notification delivery is coming in a future update.
+                </p>
+              </div>
             </SettingSection>
 
             {/* Risk preferences */}
@@ -329,12 +334,9 @@ export default function SettingsPage() {
                 </button>
               </SettingRow>
               <SettingRow label="Export Risk Report" description="Download your semester analysis as PDF.">
-                <button
-                  type="button"
-                  className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                >
-                  Export PDF
-                </button>
+                <span className="rounded-lg border border-red-100 bg-red-50/50 px-3 py-1.5 text-xs font-medium text-red-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-600">
+                  Coming soon
+                </span>
               </SettingRow>
             </SettingSection>
 

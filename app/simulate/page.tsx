@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SiteHeader } from "../components/ui";
 
 // ── Grade scale ────────────────────────────────────────────────────────────
@@ -134,6 +134,23 @@ export default function SimulatePage() {
   const [priorGPA,     setPriorGPA]     = useState("3.20");
   const [priorCredits, setPriorCredits] = useState("45");
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("gr:analysis");
+      if (!raw) return;
+      const data = JSON.parse(raw) as { courses?: { name: string; code: string; credits: number }[] };
+      const loaded = (data.courses ?? []).map((c, i) => ({
+        id: String(i + 1),
+        name: c.name,
+        code: c.code,
+        credits: c.credits,
+        currentGrade: "B" as const,
+        targetGrade:  "B+" as const,
+      }));
+      if (loaded.length > 0) setCourses(loaded);
+    } catch { /* fall back to defaults */ }
+  }, []);
+
   const semCredits = courses.reduce((s, c) => s + c.credits, 0);
   const currentGPA = calcGPA(courses, "currentGrade");
   const targetGPA  = calcGPA(courses, "targetGrade");
@@ -208,6 +225,9 @@ export default function SimulatePage() {
           {/* Prior credits input */}
           <div className="rounded-2xl border border-dashed border-red-200 bg-red-50/50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
             <p className="text-xs font-semibold uppercase tracking-widest text-red-400 dark:text-slate-500">Prior History</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-red-400/70 dark:text-slate-500">
+              Enter your GPA and credits before this semester so your cumulative GPA projection is accurate.
+            </p>
             <div className="mt-3 space-y-2">
               <div>
                 <label className="text-xs text-red-500 dark:text-slate-500">Cumulative GPA</label>
